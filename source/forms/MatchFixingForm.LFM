@@ -1,0 +1,605 @@
+object MatchFixingForm: TCEForm
+  Left = -1467
+  Height = 590
+  Top = 245
+  Width = 1015
+  AlphaBlend = True
+  BorderIcons = [biSystemMenu, biMinimize]
+  BorderStyle = bsSingle
+  Caption = 'MatchFixingForm'
+  ClientHeight = 590
+  ClientWidth = 1015
+  OnClose = MatchFixingFormClose
+  OnShow = MatchFixingFormShow
+  Position = poScreenCenter
+  object TopPanel: TCEPanel
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = Owner
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    Left = 0
+    Height = 54
+    Top = 0
+    Width = 1015
+    Anchors = [akTop, akLeft, akRight]
+    BevelOuter = bvNone
+    ClientHeight = 54
+    ClientWidth = 1015
+    Color = 197379
+    ParentColor = False
+    TabOrder = 0
+    OnMouseDown = MatchFixingTopPanelMouseDown
+    object Minimize: TCEImage
+      AnchorSideTop.Control = TopPanel
+      AnchorSideRight.Control = TopPanel
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = TopPanel
+      AnchorSideBottom.Side = asrBottom
+      Cursor = crHandPoint
+      Left = 941
+      Height = 44
+      Top = 10
+      Width = 32
+      Anchors = [akTop, akRight, akBottom]
+      BorderSpacing.Top = 10
+      BorderSpacing.Right = 42
+      OnClick = MatchFixingMinimizeClick
+      Picture.Data = {
+        1754506F727461626C654E6574776F726B47726170686963EA00000089504E47
+        0D0A1A0A0000000D4948445200000020000000200806000000737A7AF4000000
+        0473424954080808087C0864880000000970485973000001FA000001FA01178A
+        446F0000001974455874536F667477617265007777772E696E6B73636170652E
+        6F72679BEE3C1A00000067494441545885ED96410AC0200C0455FAA4FCFF05F9
+        933D150A0DC14AC3529839EA6187F5B0B60620A64787EE3E2BC2CCEC91372A82
+        DE70649791F10E59A3F206104000010410900BA46374B13BCF2B63F68F06BE9A
+        E50879037281F409AAFE8677E40D00C839017F601034548A9EA3000000004945
+        4E44AE426082
+      }
+    end
+    object Exit: TCEImage
+      AnchorSideTop.Control = TopPanel
+      AnchorSideRight.Control = TopPanel
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = TopPanel
+      AnchorSideBottom.Side = asrBottom
+      Cursor = crHandPoint
+      Left = 973
+      Height = 44
+      Top = 10
+      Width = 32
+      Anchors = [akTop, akRight, akBottom]
+      BorderSpacing.Top = 10
+      BorderSpacing.Right = 10
+      OnClick = MatchFixingExitClick
+      Picture.Data = {
+        1754506F727461626C654E6574776F726B47726170686963A102000089504E47
+        0D0A1A0A0000000D4948445200000020000000200806000000737A7AF4000000
+        0473424954080808087C0864880000000970485973000001FA000001FA01178A
+        446F0000001974455874536F667477617265007777772E696E6B73636170652E
+        6F72679BEE3C1A0000021E494441545885ED964F6B134118871F6766C945BD19
+        D006938045242DF9438E89364650D0AFD60FA05F245E9A140CBA0B4BB29B3F94
+        620FF5A0823DEA6D77470FD9C09A36EB4EA0EA21BFE364E77D9E7D6733BCB0CD
+        36FF736CDBBE7DDD35C4BA1F5CD73D544A4D1CC7296F0A771CA7AC949ABAAE7B
+        6824301C0E6F01AF80A294B2E7BAEE5D53F86834BA27A5EC01F78197F3F9FC66
+        668156ABF5DDB2AC3630031E021FC6E371292BDC719CB2D6FA7DBC7726846857
+        2A951F573D7B23AD90EFFBF920088E803DE09394F2A05EAF9FA7ED198FC7A528
+        8A8E812230B32CAB5BAD56BFAD7B3E55C054C2149E4920ABC426F0CC0209893E
+        5001CEA5949DA5C4A67023812B24CEC230ECE47239B529DC5800C0B6ED82526A
+        003C004EE2E547C09952EAA056AB7D36A9672C00973A0130B72CEBA9C99B2FB3
+        F6264C4B14453F019D58D2F19A718C057CDFCF6BADFBC03E8B233801F6B5D67D
+        DFF7F3D72AE079DE4E100443167FC709F05808F10498027B4110BCF33C6FC7A4
+        66E66FC0F3BC9D300C07C02E3011423C6B341A1700A3D1E88ED6FA8845573E2A
+        A53A593FC64C1DB06DBB90804F93708046A3712184E8B2E8C46E188603DBB60B
+        596AFFB103F12533004A31BC9B8427B3D289DF2EAB8D04566EB854F8A6126B8F
+        C0719CB2291C2E1D47298AA2E3B4A166ED4022A57C1BC34F81E759E02B122FE2
+        BD452965CF7820015EB378F376B3D9FC9A159E90F82284580E356FD60D24A9F9
+        1B43E936DBFCF3FC022B763151E93248C20000000049454E44AE426082
+      }
+    end
+    object MatchFixingSettings: TCEImage
+      AnchorSideLeft.Control = TopPanel
+      AnchorSideTop.Control = TopPanel
+      AnchorSideBottom.Control = TopPanel
+      AnchorSideBottom.Side = asrBottom
+      Cursor = crHandPoint
+      Left = 10
+      Height = 44
+      Top = 10
+      Width = 32
+      Anchors = [akTop, akLeft, akBottom]
+      AutoSize = True
+      BorderSpacing.Left = 10
+      BorderSpacing.Top = 10
+      OnClick = MatchFixingSettingsClick
+      Picture.Data = {
+        1754506F727461626C654E6574776F726B477261706869637903000089504E47
+        0D0A1A0A0000000D4948445200000020000000200806000000737A7AF4000000
+        0473424954080808087C0864880000000970485973000001FA000001FA01178A
+        446F0000001974455874536F667477617265007777772E696E6B73636170652E
+        6F72679BEE3C1A000002F6494441545885ED954F68147714C73F6F9864762B66
+        034D841E5AA930882EC6107E49963D48377A9096FED52A7AB45E44905E7AEEB1
+        3DB6EA4DCCADD083FDA3565B6DC51E9685647E49BB07ADC4561131186A5B6143
+        E86667F7F5901196E96C8CEEC68B799761E6FB789FEFEFBD9937B016CF7B4827
+        8A94CBE50D61181E01DE50D58D51DDBBC059D7754F0F0E0EDE5B350341101C10
+        9153C0BA1629BF6632999CEFFBD524D16913BE5744BE88E067446407B005B815
+        A55C0FC370B7EFFB556B6D57470D586BFB44E4344B5DFCD018F37EAD569B01BE
+        023601BF85613896CBE5E6A6A7A7FB55B5343939F972C70C00C7801EE08C31E6
+        7300D775AF025B23782197CBCD596BFB1A8DC61511318EE31CEEA481B70144E4
+        78D3B32D008D4663EC111CF809D816E96F76D2C0AB00A954EA97B8303232727F
+        6262E245E047603B70339236C573DD360C345A09D65A6DBABDA6AA6F89C81F24
+        1CB89D0E4C012C2C2C9865726E8461B8137825BAFF3D9EF0541D08826033D1BC
+        81D7809F018C31897BC55A3B0E202267E3DA1377200882CD2272157809B8D0DB
+        DBFBC972F95353531F01AF030FABD5EA89B8FE441D88C12F6632993DBEEF57CB
+        E5F2BAC5C5C58F81CBF3F3F345CFF324954A0DABEA3155DD03A8881CCAE7F37F
+        C76BAE781527C0DF8B36DC0BC005964691147FA9EA07C3C3C3FF6BFF8A0D34C3
+        45E4FB9E9E9E779BE0DF01056016B801E48186885C53D5F3DDDDDD27070606FE
+        6955FBB123B0D66E03AE00FDC0B7AABACFF7FD5AB1585C2F223FA86A1EB8ED38
+        4E616868E8CE4A0ED41CCB76200E07F619636AC562717D3A9D6E1BBEAC816701
+        87162388C3D3E9F4FE6C36DB713824EC81E8977929825FAA542A07B2D9EC62A9
+        544A7B9EF74D049FADD7EBBBDB85271A1091CF58FAD42E572A95770A85C2BFA5
+        5229DDD5D5755E447646F0C2E8E8E84CBBF05606C600EAF5FAC14770CFF3CEAD
+        063CD100F000C075DD5DD6DA3ECFF3CEA9EAAED580271A50D54FA3EB97C09F11
+        FCB6E338F94EC3130D1863C681A3C00C30A7AA5F8761B8A3132FDC5AAC4552FC
+        07DB785335C7BD05490000000049454E44AE426082
+      }
+    end
+    object SyncImage: TCEImage
+      AnchorSideLeft.Control = MatchFixingSettings
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = TopPanel
+      Left = 52
+      Height = 32
+      Hint = 'Refresh'
+      Top = 10
+      Width = 32
+      AutoSize = True
+      BorderSpacing.Left = 10
+      BorderSpacing.Top = 10
+      OnClick = MatchFixingSyncImageClick
+      Picture.Data = {
+        1754506F727461626C654E6574776F726B477261706869639203000089504E47
+        0D0A1A0A0000000D4948445200000020000000200806000000737A7AF4000000
+        0473424954080808087C0864880000000970485973000001FA000001FA01178A
+        446F0000001974455874536F667477617265007777772E696E6B73636170652E
+        6F72679BEE3C1A0000030F494441545885ED97C16B1C7514C73FEFB793640F12
+        14690A69111A146AD290646737B986145A42518287607B2D050FB6C1E04D0954
+        AC172DA23DF60F280D48A52D1463633C78099B992569B785AECC452AA54530B9
+        24999DFD3D0F9940099DC9CE68BDE83BFD96F7E6FBFDECFCDE3EDEC27F3D24EF
+        83BEEF1FB0D67E638C9929954ACFF2EA98BC0FB65AAD2BC0696BEDA2EFFB07FE
+        7500C7713E003C60D05AFB8BEFFBBD7974725F01C0DADADA6B6118DE054AC023
+        C771268687871FBF348046A3D1B5B1B131A5AA93B1690F70F0B992FBAD566B7C
+        6C6CEC8F76359D760B3DCF7B6F7D7DFD2BE0484A99884847BB9AD0460FA8AA78
+        9EF7B9AA7E179BD75575D65A7B4C5507818771E9FD8E8E8E89D1D1D127FF2880
+        E7791755F513A0A9AAE7832018AA542A5F7775753D1391EBC0DBC03D63CCC4D0
+        D0D0D32CE6B0CF1554ABD577814F811078A752A92CECE6C230FC5644FA63F3E3
+        7967412240BD5EEFDCDCDCBCCC4EA3CE94CBE585E7F38542E1BCB5D6B6338854
+        55444433016C6D6D4D016F02F52008AEEECDC7A667D28C01565656E67CDFAF01
+        B75E944FEC01559D8A8F57A7A7A75BFB1925989F002EAAEAFB4935694DE80288
+        C8424A4D6A8848101F47F200F402148BC5DFF2026C6F6FEF4EC5C379000088A2
+        E885CDD34E586BF71D7469008F01C2304C9B7CA9D1D9D9F9467CFC3D338088D4
+        008C3187F20218634EC6472FA926F115596BAF89C803D7757FC863BEB4B4E400
+        E7E28FDF67062897CBB744E4669A49DA56D4DDDDFD91AA1E051AB9009226D71E
+        F3456050550538BD9BAB56AB93AAFA05A02232EBBA6E3333405AACAEAEF6349B
+        CD45E01850771C6706607E7EBED0D7D7F721F065ACFD99EBBAB7D3B4326F44B1
+        F94FC000F0D018331945D12B71C39D05FA01052EB9AE3BB7DF9BCC04B0BCBCFC
+        7AA150F8999D6F9E1481887CECBAEE8D7634335D41BCEDECFDE96E0101501591
+        3BC562F1C6C0C040D8B6661600805AADF66A14453F8A4819F8D5719CF1AC8BE8
+        DF02D885B0D62EA86A05681863C64BA552E2B44B8B5CFF0B464646FE149153C0
+        3DE02D55BD9C47273700EC2C24C698E3C03511B99057E7FFF80B0C5E2528F462
+        60B50000000049454E44AE426082
+      }
+    end
+    object AlwaysOnTop: TCEImage
+      AnchorSideTop.Control = TopPanel
+      AnchorSideRight.Control = TopPanel
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = TopPanel
+      AnchorSideBottom.Side = asrBottom
+      Left = 909
+      Height = 44
+      Top = 10
+      Width = 32
+      Anchors = [akTop, akRight, akBottom]
+      BorderSpacing.Top = 10
+      BorderSpacing.Right = 74
+      OnClick = AlwaysOnTopClick
+      Picture.Data = {
+        1754506F727461626C654E6574776F726B47726170686963F403000089504E47
+        0D0A1A0A0000000D4948445200000020000000200806000000737A7AF4000000
+        0473424954080808087C08648800000009704859730000024F0000024F01F791
+        38900000001974455874536F667477617265007777772E696E6B73636170652E
+        6F72679BEE3C1A00000371494441545885ED954F681C551CC73FEFCD46C8A256
+        D4A6A21EECEA25DDA44D66DFB81112A169A0DEA490430DD88BA278510411C4D8
+        620BA228227AF45004FF60F022880771F7D21CD29D37936CEBA6B64A7BB222B1
+        204458C9CECECFC3CEC29266B353B3F594DF6998F7FB7DBFDFF79DEFBC07BBD5
+        E70A8260F856FA753FC92B95CA988884BEEFBF9E7646F58BDC5ABB0708815CF2
+        EA9431E674AFB97E3AF07142FE1BD004DEB6D6BEF6BF08B0D63E0F9C00D61DC7
+        392C22C78106F0BEB5F6E46D151004C141E01300A5D42BE3E3E3BF789EF78D88
+        CC01112D27DEEA36BFA30C586BB34005C88BC8E79EE73DDBB9EEFBFEAC52EA2B
+        20039C34C69CD98CB1230794521F0279E072369B7D69F37AE2C433B49C386DAD
+        9DBF09230D51AD56BBA35EAFCF02C70003DC0DFC05EC4FC0A78C31E7BBCDFBBE
+        7F42297516D04AA9570B85C247EDB59E0E044170B45EAF5F03BE00668147807B
+        69255E89C8FC76E400221200D793E777C3303C904A80EFFB6F8AC8F7C083C09A
+        88CC8BC8E8C6C6C67DC06322F2B431E6831E1B78416BED030F039745E409D775
+        57DBEB5D3F41AD56BBB35EAF9F03C6807F9ACDE6A162B178653BB2CE5A5E5EBE
+        A7D96C7E4ACB3544E46C369B7D399FCFFFDDD9B76D0692D3ED07E071E06760DA
+        18F37B2FF220088E8AC867C03EE086883CE779DEB75BF5F60CA1B5F67EE047E0
+        10B0D26C36678AC5E28DAD7A1716169C5C2EF706708AD6AF775E44E63CCFBBDA
+        0DBF67088D317F0233C00560CC719C5222EAA6CAE5724F016712DCF780A9EDC8
+        E1160EA2300CF7C6715C0246810B5AEB19D775D73A7BACB58F02BF02ABC6987C
+        1ADCD40791EBBA6B5AEBE3400C1C8CE3B81486E1DECE9E818181F5E4714F5ADC
+        D402AAD5EA501CC75F273331301AC771B95AAD0EB57BA2286A5FC5EB5B61FC67
+        01D56A75A8D168948011E0A2526A04B8088C341A8D52878863004AA95ADF0424
+        E4E536B9D6FA48A150B8A4B53ED221A2ECFBFE8888BC988C7D9756C0B6215C5A
+        5ADA97C9644AB42E9C9FB4D6D39DC14B82D916D7000680EB838383FBF3F9FC46
+        1A015D1D585959792893C99CA375D55AC771A636A7DE75DD35C771A644C426E4
+        511CC77369C9A18B03C9CECBC00160358AA2E98989893FBA81B43F9352EACB42
+        A1F04E5AF22D05542A9507B4D66560380D79BB161717EF9A9C9C4C9DFEAE02AC
+        B5AB09F9A5288A0EA721DF496D9581615AE97EF27693EFD66E01FC0B846F709C
+        00DE69A20000000049454E44AE426082
+      }
+    end
+    object AlwaysOnTopOn: TCEImage
+      AnchorSideTop.Control = TopPanel
+      AnchorSideRight.Control = TopPanel
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = TopPanel
+      AnchorSideBottom.Side = asrBottom
+      Left = 274
+      Height = 44
+      Top = 10
+      Width = 32
+      Anchors = [akTop, akRight, akBottom]
+      BorderSpacing.Top = 10
+      BorderSpacing.Right = 74
+      OnClick = AlwaysOnTopClick
+      Picture.Data = {
+        1754506F727461626C654E6574776F726B47726170686963FB04000089504E47
+        0D0A1A0A0000000D4948445200000020000000200806000000737A7AF4000000
+        0473424954080808087C08648800000009704859730000024F0000024F01F791
+        38900000001974455874536F667477617265007777772E696E6B73636170652E
+        6F72679BEE3C1A00000478494441545885ED976D88546514C77FE7CECE884BBE
+        50A96182BBA3063A3AEBCCDE694D30CAD6940C52D80F662541110861041244A6
+        A45F9222D23E165850484B44412C59ADBB14C4ECDCB71D753473A92FBD6AD692
+        C5D4CEBDF7F461EEC2B0EECC8E38F5A9F3652ECF39E7FF3FCF7FCEF31C1EF8DF
+        5A6C8EE3ACBC9678A395E4854261ADAABA96653DD36C8EB48ADCB6ED79800B24
+        A3A503A6691E9C29AF950A1C8DC8BF0702E005DBB6F7FE2705D8B6FD38B00BB8
+        128BC5EE56D51D400578C9B6EDFDFF6A018EE3A481D70044E4A94C26732197CB
+        BDA7AA3B019FAA12CFD7CBBFAE1EB06DBB1D280029557D3B97CB3D52EBB72CAB
+        4F448E036DC07ED3340F4DC5B82E0544E41520059C6F6F6FDF3DD51F29F12055
+        250EDAB6BDEF2A8C66884AA552A25C2EF701DB0113980B8C039D11F806D33447
+        EAE55B96B54B448E0186883CDDDDDDFDEAA46F46051CC7D95C2E97BF05DE01FA
+        800EE046AA1D2FAABAAF113980AA3AC00FD1F78BAEEBAE6AAA00CBB29E53D501
+        6031704955F7A9EA9A8989899B80E5AAFA80699A2FCFB081270CC3B08025C079
+        55BD239BCD9E9DF4D7FD0B4AA5D20DE572F90B602DF05710045D3D3D3D5F3722
+        AB35CFF3E60741F03A55D550D563EDEDED7B52A9D41FB5710D7B20BADD3E016E
+        07BE02369AA6F9E34CE48EE36C56D5B78045C065557D2C97CB7D385DEC8C4D68
+        DBF6CDC0674017301A04416F4F4FCFE5E962FBFBFB63C964F259E000D5A337A2
+        AA3B73B9DC37F5F0676C42D3347F017A8153C0DA582C36181575952593C92DC0
+        A108F730B0A111395CC345E4BAEE82300C078135C029C3307AB3D9ECA5DA18DB
+        B6970163C039D334574D8733D59ABE88B2D9EC25C330760021900EC370D075DD
+        05B531F178FC4AF439AF59DCA60B28168B0BC3307C37CA09813561189E2C168B
+        0B27637CDF9F1CC5BFB7B48062B1B8B052A90C02AB81D322B21A3803ACAE542A
+        8335456C8F7ECF355BC08C3D303A3A7AABEFFB43C00A11B10CC3B83793C98C7B
+        9E37DFF7FD4F45C4042E8461F890611883C09CA8F38F37C2B52C2B09F4355420
+        9FCF2FF27DFF04B0023823225B3399CC38402693190F82E07EAABB9D2D224780
+        39C04F954AE58346B89EE77588C890881CAEAB403E9F5FD4D6D6761258059C89
+        C7E3F77475755D9C1A5728146E51D5B98944E26210041FABEAC15C2E37500FD7
+        75DDA561180E031D22624D5BC014F2B3BEEF6F5CB76EDDCF8D7605D5A9994AA5
+        26EAF9A3633A0C2C51D5CF1389C47D6D53833CCFEB08826088EAD4731289C426
+        D3347F6B443C3232729B61188B53A9D470BD987C3EBF0438417528B9B366CDDA
+        964EA7FFBCAA0782201888C8CFF9BEBF359D4E3724775D77692C161B129101CB
+        B236D589591C29BA0C189D9898D834893B5D13AE044E03773623FBD8D8D87754
+        67C56C11F9C8B6ED6DB57ECFF33AC230FC926A231780BBD6AF5FFFEBA4BF25EF
+        826808BD013C0A544464477777F7FBD1111E0696D71EE1DADC963D4CFAFBFB63
+        9D9D9D6F8AC8C3C0DF22B25B55F7526DE4523C1EDF38DD296A590100AA2AAEEB
+        1E55D5276B969D582CD63B75E793D6D2B7A18868369BDD031C89964E035BEA91
+        03FC035223DC963E3734230000000049454E44AE426082
+      }
+      Visible = False
+    end
+  end
+  object MatchFixingMainPanel: TCEPanel
+    AnchorSideLeft.Control = TopPanel
+    AnchorSideTop.Control = TopPanel
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Control = Owner
+    AnchorSideBottom.Side = asrBottom
+    Left = 0
+    Height = 536
+    Top = 54
+    Width = 1015
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    BevelOuter = bvNone
+    ClientHeight = 536
+    ClientWidth = 1015
+    Color = 1776154
+    Font.CharSet = EASTEUROPE_CHARSET
+    Font.Color = clSilver
+    Font.Height = -12
+    Font.Name = 'Verdana'
+    Font.Pitch = fpVariable
+    Font.Quality = fqDraft
+    ParentColor = False
+    ParentFont = False
+    TabOrder = 1
+    object MatchFixingContainer: TCEPanel
+      AnchorSideLeft.Control = FixingTypeListBox
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = MatchFixingMainPanel
+      AnchorSideRight.Control = MatchFixingMainPanel
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = MatchFixingMainPanel
+      AnchorSideBottom.Side = asrBottom
+      Left = 165
+      Height = 516
+      Top = 10
+      Width = 820
+      Anchors = [akTop, akLeft, akRight, akBottom]
+      BorderSpacing.Left = 15
+      BorderSpacing.Top = 10
+      BorderSpacing.Right = 30
+      BorderSpacing.Bottom = 10
+      BevelOuter = bvNone
+      ClientHeight = 516
+      ClientWidth = 820
+      TabOrder = 0
+      Visible = False
+      object MatchFixingScroll: TScrollBox
+        AnchorSideLeft.Control = MatchFixingContainer
+        AnchorSideTop.Control = MatchFixingNewMatchFixBtn
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = MatchFixingContainer
+        AnchorSideRight.Side = asrBottom
+        AnchorSideBottom.Control = MatchFixingContainer
+        AnchorSideBottom.Side = asrBottom
+        Left = 0
+        Height = 451
+        Top = 65
+        Width = 820
+        HorzScrollBar.Page = 1
+        VertScrollBar.Page = 1
+        Anchors = [akTop, akLeft, akRight, akBottom]
+        BorderSpacing.Top = 15
+        BorderStyle = bsNone
+        TabOrder = 0
+      end
+      object MatchFixingNewMatchFixBtn: TPaintBox
+        AnchorSideLeft.Control = MatchFixingContainer
+        AnchorSideTop.Control = MatchFixingContainer
+        Cursor = crHandPoint
+        Left = 25
+        Height = 45
+        Hint = 'Fix Match'
+        Top = 5
+        Width = 160
+        BorderSpacing.Left = 25
+        BorderSpacing.Top = 5
+        Color = 1776154
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+        OnClick = MatchFixingNewMatchFixBtnClick
+        OnMouseEnter = onBtnMouseEnter
+        OnMouseLeave = onBtnMouseLeave
+        OnPaint = onPaintButton
+      end
+    end
+    object Resizer: TCEImage
+      AnchorSideRight.Control = MatchFixingMainPanel
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = MatchFixingMainPanel
+      AnchorSideBottom.Side = asrBottom
+      Cursor = crSizeSE
+      Left = 1005
+      Height = 10
+      Top = 526
+      Width = 10
+      Anchors = [akRight, akBottom]
+      OnMouseDown = ResizerMouseDown
+      OnMouseMove = ResizerMouseMove
+      OnMouseUp = ResizerMouseUp
+      Picture.Data = {
+        1754506F727461626C654E6574776F726B477261706869636B01000089504E47
+        0D0A1A0A0000000D494844520000000A0000000A08060000008D32CFBD000000
+        0473424954080808087C086488000000017352474200AECE1CE9000000046741
+        4D410000B18F0BFC61050000000970485973000000B9000000B901E2A741E800
+        00001974455874536F667477617265007777772E696E6B73636170652E6F7267
+        9BEE3C1A000000CB49444154285363201630828873E7CE99FCFFFFDF062C0204
+        8C8C8C978D8C8CF642B960C00422FEFDFBE70C549805A4AFFEFDFBF7C09F3F7F
+        6E81659100582108303131A5004D2A60616179656666F6182A0C07708540939E
+        004DCD059A3A0BE8142990D8F9F3E7154E9F3EED0062831502155C666666FE6C
+        6A6A7A0F68623A48F1C58B17C580B430D02635901AB067D001C844A0A2D94003
+        6602154A181B1BCF825B0D0320EB809E1103BA770E104F820A23DC080340455A
+        406780DC250F54380168EA71880C5180810100DF4859A4387834E60000000049
+        454E44AE426082
+      }
+    end
+    object FixingTypeListBox: TCEListBox
+      AnchorSideLeft.Control = MatchFixingMainPanel
+      AnchorSideTop.Control = MatchFixingMainPanel
+      AnchorSideBottom.Control = MatchFixingMainPanel
+      AnchorSideBottom.Side = asrBottom
+      Left = 10
+      Height = 516
+      Top = 10
+      Width = 140
+      Anchors = [akTop, akLeft, akBottom]
+      BorderSpacing.Left = 10
+      BorderSpacing.Top = 10
+      BorderSpacing.Bottom = 10
+      BorderStyle = bsNone
+      Color = 5653320
+      Items.Strings = (
+        'Match Fixing'
+        'Favourite Teams'
+        'Favourite Scorers'
+      )
+      ItemHeight = 14
+      OnSelectionChange = FixingTypeListBoxSelectionChange
+      TabOrder = 1
+    end
+    object MatchFixingFavContainer: TCEPanel
+      AnchorSideLeft.Control = FixingTypeListBox
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = MatchFixingMainPanel
+      AnchorSideRight.Control = MatchFixingMainPanel
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = MatchFixingMainPanel
+      AnchorSideBottom.Side = asrBottom
+      Left = 165
+      Height = 516
+      Top = 10
+      Width = 820
+      Anchors = [akTop, akLeft, akRight, akBottom]
+      BorderSpacing.Left = 15
+      BorderSpacing.Top = 10
+      BorderSpacing.Right = 30
+      BorderSpacing.Bottom = 10
+      BevelOuter = bvNone
+      ClientHeight = 516
+      ClientWidth = 820
+      TabOrder = 2
+      Visible = False
+      object MatchFixingFavScroll: TScrollBox
+        AnchorSideLeft.Control = MatchFixingContainer
+        AnchorSideTop.Control = MatchFixingAddFavTeamBtn
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = MatchFixingContainer
+        AnchorSideRight.Side = asrBottom
+        AnchorSideBottom.Control = MatchFixingContainer
+        AnchorSideBottom.Side = asrBottom
+        Left = 0
+        Height = 445
+        Top = 71
+        Width = 820
+        HorzScrollBar.Page = 1
+        VertScrollBar.Page = 1
+        Anchors = [akTop, akLeft, akRight, akBottom]
+        BorderSpacing.Top = 15
+        BorderStyle = bsNone
+        TabOrder = 0
+      end
+      object MatchFixingAddFavTeamBtn: TPaintBox
+        AnchorSideLeft.Control = MatchFixingFavContainer
+        AnchorSideTop.Control = MatchFixingFavContainer
+        Cursor = crHandPoint
+        Left = 25
+        Height = 45
+        Hint = 'Add Team'
+        Top = 5
+        Width = 160
+        BorderSpacing.Left = 25
+        BorderSpacing.Top = 5
+        Color = 1776154
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+        OnClick = MatchFixingAddFavTeamBtnClick
+        OnMouseEnter = onBtnMouseEnter
+        OnMouseLeave = onBtnMouseLeave
+        OnPaint = onPaintButton
+      end
+      object MatchFixingFavTeamHelp: TCELabel
+        AnchorSideLeft.Control = MatchFixingAddFavTeamBtn
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = MatchFixingFavContainer
+        Cursor = crHelp
+        Left = 181
+        Height = 14
+        Hint = 'Click on me'
+        Top = 15
+        Width = 17
+        BorderSpacing.Left = 10
+        BorderSpacing.Top = 15
+        Caption = '(?)'
+        ParentColor = False
+        ParentShowHint = False
+        ShowHint = True
+        OnClick = MatchFixingFavTeamHelpClick
+      end
+    end
+    object MatchFixingFavScorersContainer: TCEPanel
+      AnchorSideLeft.Control = FixingTypeListBox
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = MatchFixingMainPanel
+      AnchorSideRight.Control = MatchFixingMainPanel
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = MatchFixingMainPanel
+      AnchorSideBottom.Side = asrBottom
+      Left = 165
+      Height = 516
+      Top = 10
+      Width = 820
+      Anchors = [akTop, akLeft, akRight, akBottom]
+      BorderSpacing.Left = 15
+      BorderSpacing.Top = 10
+      BorderSpacing.Right = 30
+      BorderSpacing.Bottom = 10
+      BevelOuter = bvNone
+      ClientHeight = 516
+      ClientWidth = 820
+      TabOrder = 3
+      Visible = False
+      object MatchFixingAddFavScorerBtn: TPaintBox
+        AnchorSideLeft.Control = MatchFixingFavScorersContainer
+        AnchorSideTop.Control = MatchFixingFavScorersContainer
+        Cursor = crHandPoint
+        Left = 25
+        Height = 45
+        Hint = 'Add Player'
+        Top = 5
+        Width = 160
+        BorderSpacing.Left = 25
+        BorderSpacing.Top = 5
+        Color = 1776154
+        ParentColor = False
+        ParentFont = False
+        ParentShowHint = False
+        OnClick = MatchFixingAddFavScorerBtnClick
+        OnMouseEnter = onBtnMouseEnter
+        OnMouseLeave = onBtnMouseLeave
+        OnPaint = onPaintButton
+      end
+      object MatchFixingFavScorerHelp: TCELabel
+        AnchorSideLeft.Control = MatchFixingAddFavScorerBtn
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = MatchFixingFavScorersContainer
+        Cursor = crHelp
+        Left = 195
+        Height = 14
+        Hint = 'Click on me'
+        Top = 15
+        Width = 17
+        BorderSpacing.Left = 10
+        BorderSpacing.Top = 15
+        Caption = '(?)'
+        ParentColor = False
+        ParentShowHint = False
+        ShowHint = True
+        OnClick = MatchFixingFavScorerHelpClick
+      end
+      object MatchFixingFavScorersScroll: TScrollBox
+        AnchorSideLeft.Control = MatchFixingFavScorersContainer
+        AnchorSideTop.Control = MatchFixingAddFavScorerBtn
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = MatchFixingFavScorersContainer
+        AnchorSideRight.Side = asrBottom
+        AnchorSideBottom.Control = MatchFixingFavScorersContainer
+        AnchorSideBottom.Side = asrBottom
+        Left = 0
+        Height = 441
+        Top = 75
+        Width = 820
+        HorzScrollBar.Page = 1
+        VertScrollBar.Page = 1
+        Anchors = [akTop, akLeft, akRight, akBottom]
+        BorderSpacing.Top = 15
+        BorderStyle = bsNone
+        TabOrder = 0
+      end
+    end
+  end
+end
