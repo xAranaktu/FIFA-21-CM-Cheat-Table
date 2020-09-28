@@ -5,7 +5,9 @@ local LIP = require 'lua/requirements/LIP';
 
 local Logger = require 'lua/imports/logger';
 local MemoryManager = require 'lua/imports/MemoryManager';
+
 local mainFormManager = require 'lua/GUI/forms/mainform/manager';
+local settingsFormManager = require 'lua/GUI/forms/settingsform/manager';
 
 local TableManager = {}
 
@@ -25,6 +27,8 @@ function TableManager:new(o)
     self.FIFA_year = 21
     self.game_name = "FIFA 21"
 
+    self.addr_list = getAddressList()
+
     self.proc_name = ""
 
     self.dirs = {}
@@ -33,15 +37,23 @@ function TableManager:new(o)
     self.form_managers = {}
     self.cfg = {}
     self.offsets = {}
+    self.ptrs = {}
 
     self.no_internet = false
     self.show_ce = true
-    self.addr_list = getAddressList()
 
     --timers
     self.auto_attach_timer = nil
 
     return o;
+end
+
+function TableManager:get_frm_mgr(key)
+    return self.form_managers[key]
+end
+
+function TableManager:get_frm(key)
+    return self:get_frm_mgr(key).frm
 end
 
 function TableManager:execute_cmd(cmd)
@@ -123,10 +135,10 @@ function TableManager:check_for_ct_update()
         end
         if ifreever > icurver then
             LATEST_VER = free_version
-            self.form_managers["main_form"].o.LabelLatestLEVer.Caption = string.format(
+            self:get_frm("main_form").LabelLatestLEVer.Caption = string.format(
                 "(Latest: %s)", LATEST_VER
             )
-            self.form_managers["main_form"].o.LabelLatestLEVer.Visible = true
+            self:get_frm("main_form").LabelLatestLEVer.Visible = true
             return true
         end
     else
@@ -135,10 +147,10 @@ function TableManager:check_for_ct_update()
                 return false
             end
             LATEST_VER = patrons_version
-            self.form_managers["main_form"].o.LabelLatestLEVer.Caption = string.format(
+            self:get_frm("main_form").LabelLatestLEVer.Caption = string.format(
                 "(Latest: %s)", LATEST_VER
             )
-            self.form_managers["main_form"].o.LabelLatestLEVer.Visible = true
+            self:get_frm("main_form").LabelLatestLEVer.Visible = true
             return true
         end
     end
@@ -155,11 +167,54 @@ function TableManager:version_check()
             true
         )
     end
-    self.form_managers["main_form"].o.LabelCEVer.Caption = ce_version
+    self:get_frm("main_form").LabelCEVer.Caption = ce_version
 
     local ct_ver = self:get_ct_ver()
     self.logger:info(string.format('Cheat Table version: %s', ct_ver))
-    self.form_managers["main_form"].o.LabelLEVer.Caption = ct_ver
+    self:get_frm("main_form").LabelLEVer.Caption = ct_ver
+end
+
+function TableManager:get_forms_map()
+    return {
+        main_form = {
+            mgr = mainFormManager,
+            frm = MainWindowForm
+        },
+        settings_form = {
+            mgr = settingsFormManager,
+            frm = SettingsForm
+        },
+    }
+end
+
+function TableManager:setup_forms()
+    local forms_map = self:get_forms_map()
+
+    settingsFormManager.dirs = deepcopy(self.dirs)
+    settingsFormManager.fnSaveCfg = function(cfg)
+        self:save_cfg(cfg)
+    end
+
+
+    for k, v in pairs(forms_map) do
+        self.form_managers[k] = v.mgr
+        v.mgr:setup({
+            name=k,
+            frm_obj=v.frm,
+            logger=self.logger
+        })
+    end
+
+
+
+end
+
+function TableManager:style_forms()
+    local forms_map = self:get_forms_map()
+
+    for k, v in pairs(forms_map) do
+        self:get_frm_mgr(k):style_form()
+    end
 end
 
 function TableManager:initialize()
@@ -201,9 +256,8 @@ function TableManager:initialize()
     self.dirs["CONFIG_FILE"] = self.dirs["DATA"] .. 'config.ini';
     self.dirs["OFFSETS_FILE"] = self.dirs["DATA"] .. 'offsets.ini';
 
-    mainFormManager.init(MainWindowForm, self.game_name)
+    self:setup_forms()
 
-    self.form_managers["main_form"] = mainFormManager
 end
 
 function TableManager:hide_mem_scanner()
@@ -241,6 +295,49 @@ function TableManager:deactive_all(record)
     end
 end
 
+function TableManager:can_autoactivate(script_id)
+    local not_allowed_to_aa = {
+        2998  -- "Generate new report" script, it's internal call and will cause crash when activated in Main Menu
+    }
+
+    for i=1, #not_allowed_to_aa do
+        if not_allowed_to_aa[i] == script_id then
+            return false
+        end
+    end
+    return true
+end
+
+function TableManager:init_ptrs()
+    self.logger:info("TODO init_ptrs")
+end
+
+function TableManager:autoactivate_scripts()
+    local always_activate = {
+        0
+    }
+
+    for i=1, #always_activate do
+        local script_id = always_activate[i]
+        local script_record = self.addr_list.getMemoryRecordByID(script_id)
+        self.logger:info(string.format('Activating %s (%d)', script_record.Description, script_id))
+        script_record.Active = true
+    end
+
+    for i=1, #self.cfg.auto_activate do
+        local script_id = self.cfg.auto_activate[i]
+        if self:can_autoactivate(script_id) then
+            local script_record = self.addr_list.getMemoryRecordByID(script_id)
+            if script_record then
+                self.logger:info(string.format('Activating %s (%d)', script_record.Description, script_id))
+                if not script_record.Active then
+                    script_record.Active = true
+                end
+            end
+        end
+    end
+end
+
 function TableManager:file_exists(name)
     local f, err = io.open(name,"r")
     if f then
@@ -255,12 +352,30 @@ function TableManager:file_exists(name)
     end
 end
 
+function TableManager:save_cfg(cfg)
+    if cfg == nil then 
+        cfg = self.cfg 
+    end
+
+    if cfg == nil then return end
+
+    self.logger:info(string.format(
+        "Saving Config to %s", self.dirs["CONFIG_FILE"]
+    ))
+    LIP.save(self.dirs["CONFIG_FILE"], cfg);
+
+end
+
 function TableManager:save_offsets(offsets)
     if not offsets.offsets then
         offsets = {
             offsets = offsets
         }
     end
+
+    self.logger:info(string.format(
+        "Saving Offsets to %s", self.dirs["OFFSETS_FILE"]
+    ))
 
     LIP.save(self.dirs["OFFSETS_FILE"], offsets);
 end
@@ -326,15 +441,57 @@ function TableManager:load_config()
     end
 end
 
+
+
+function TableManager:get_screen_id()
+    local ptr = self.ptrs["screen_id"]
+
+    return readString(readPointer(ptr))
+end
+
+function TableManager:log_screen_id()
+    local screen_id = self:get_screen_id()
+
+    if not screen_id then
+        self.logger:info("Current Screen: nil")
+    else
+        self.logger:info(string.format("Current Screen: %s", screen_id))
+    end
+end
+
 function TableManager:on_attach_to_process()
-    self.form_managers["main_form"].update_status("Attached to the game process.")
+    local main_frm_mgr = self:get_frm_mgr("main_form")
+    main_frm_mgr:update_status("Attached to the game process.")
 
     if self.cfg.flags.check_for_update then
         self:check_for_ct_update()
     end
 
-    local pScreenID = self.memory_manager:get_validated_resolved_ptr("ScreenID", 4)
-    print(readString(readPointer(pScreenID)))
+    self.ptrs["screen_id"] = self.memory_manager:get_validated_resolved_ptr("ScreenID", 4)
+    self:log_screen_id()
+
+    self.logger:info("Waiting for valid screen")
+    while self:get_screen_id() == nil do
+        showMessage('You are not in main menu in game. Enter there and close this window')
+        sleep(1500)
+    end
+    self:log_screen_id()
+
+    self:save_cfg()
+    self:autoactivate_scripts()
+    self:init_ptrs()
+
+    self:style_forms()
+
+    main_frm_mgr:remove_loading_panel()
+    main_frm_mgr:load_images()
+
+    getMainForm().Visible = true
+
+    local success_msg = "Ready to use."
+    self.logger:info(success_msg)
+    main_frm_mgr:update_status(success_msg)
+    showMessage(success_msg)
 end
 
 function TableManager:auto_attach_to_process()
@@ -358,8 +515,6 @@ function TableManager:auto_attach_to_process()
         ))
         self.proc_name = attached_to
 
-
-
         self.memory_manager:set_proc(self.proc_name)
         self.memory_manager:set_offsets(self.offsets)
         self:on_attach_to_process()
@@ -376,11 +531,17 @@ function TableManager:start()
     self.cfg = self:load_config()
     self.offsets = self:load_offsets()
 
+    local forms_map = self:get_forms_map()
+
+    for k, v in pairs(forms_map) do
+        self:get_frm_mgr(k):set_cfg(self.cfg)
+    end
+
     if self.cfg.flags.hide_ce_scanner then
         self:hide_mem_scanner()
     end
 
-    self.form_managers["main_form"].update_status(string.format("Waiting for %s...", self.game_name))
+    self:get_frm_mgr("main_form"):update_status(string.format("Waiting for %s...", self.game_name))
 
     -- show GUI
     self.addr_list.getMemoryRecordByID(CT_MEMORY_RECORDS['GUI_SCRIPT']).Active = true

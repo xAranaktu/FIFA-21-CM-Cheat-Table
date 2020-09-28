@@ -52,3 +52,8 @@ DEFAULT_CFG = {
         ignore_update = "21.1.0.0"
     }
 }
+
+-- All available forms
+FORMS = {
+    MainWindowForm, SettingsForm
+}
