@@ -11,6 +11,7 @@ function FormManager:new(o)
     self.cfg = nil
     self.logger = nil
 
+    self.resize = nil
     self.frm = nil
     self.name = ""
 
@@ -25,6 +26,56 @@ function FormManager:style_form()
     self.frm.BorderStyle = bsNone
     self.frm.AlphaBlend = true
     self.frm.AlphaBlendValue = self.cfg.gui.opacity or 255
+end
+
+function FormManager:ResizerMouseDown(sender, button, x, y)
+    self.resizer = {
+        allow_resize = true,
+        w = sender.Owner.Width,
+        h = sender.Owner.Height,
+        mx = x,
+        my = y
+    }
+end
+
+function FormManager:ResizerMouseMove(sender, x, y)
+    if (not self.resizer) then return end
+    if self.resizer['allow_resize'] then
+        self.resizer['w'] = x - self.resizer['mx'] + sender.Owner.Width
+        self.resizer['h'] = y - self.resizer['my'] + sender.Owner.Height
+    end
+end
+function FormManager:ResizerMouseUp(sender, button, x, y)
+    if (not self.resizer) then return end
+    self.resizer['allow_resize'] = false
+    sender.Owner.Width = self.resizer['w']
+    sender.Owner.Height = self.resizer['h']
+end
+
+function FormManager:doPaint(sender, bgcolor)
+    local btn_txt = sender.Hint
+    sender.Canvas.Brush.Color = bgcolor
+    sender.Canvas.fillRect(0, 0, sender.Width, sender.Height)
+    sender.Canvas.Font.Color = 0xC0C0C0
+    sender.Canvas.Font.Size = 12
+
+    -- Text Center
+    local text_x = sender.Width//2 - sender.Canvas.getTextWidth(btn_txt)//2
+    local text_y = sender.Height//2 - sender.Canvas.getTextHeight(btn_txt)//2
+    sender.Canvas.textOut(text_x, text_y, btn_txt)
+end
+
+-- Paint button
+function FormManager:onPaintButton(sender)
+    self:doPaint(sender, 0x3f3134)
+end
+
+-- Button hover effect
+function FormManager:onBtnMouseEnter(sender)
+    self:doPaint(sender, 0x5c474c)
+end
+function FormManager:onBtnMouseLeave(sender)
+    self:doPaint(sender, 0x3f3134)
 end
 
 function FormManager:OnWindowCloseClick(sender)
@@ -53,6 +104,18 @@ end
 
 
 function FormManager:assign_events()
+    self.frm.Resizer.OnMouseDown = function(sender, button, x, y)
+        self:ResizerMouseDown(sender, button, x, y)
+    end
+
+    self.frm.Resizer.OnMouseMove = function(sender, x, y)
+        self:ResizerMouseMove(sender, x, y)
+    end
+
+    self.frm.Resizer.OnMouseUp = function(sender, button, x, y)
+        self:ResizerMouseUp(sender, button, x, y)
+    end
+
     self.frm.AlwaysOnTop.OnClick = function(sender)
         self:AlwaysOnTopClick(sender)
     end

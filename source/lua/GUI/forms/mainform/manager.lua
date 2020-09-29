@@ -47,12 +47,40 @@ end
 function thisFormManager:assign_current_form_events()
     self:assign_events()
 
+    self.frm.LiveEditorBanner.OnClick = function(sender)
+        shellExecute("https://www.patreon.com/xAranaktu/posts?filters[tag]=Live Editor 21")
+    end
+
+    self.frm.Patreon.OnClick = function(sender)
+        shellExecute(URL_LINKS.PATREON)
+    end
+
+    self.frm.Discord.OnClick = function(sender)
+        shellExecute(URL_LINKS.DISCORD)
+    end
+
     self.frm.Settings.OnClick = function(sender)
         self:onSettingsClick(sender)
     end
 
     self.frm.CE.OnClick = function(sender)
         self:onCEClick(sender)
+    end
+
+    self.frm.PlayersEditorBtn.OnClick = function(sender)
+        print("Click Players Editor")
+    end
+
+    self.frm.PlayersEditorBtn.OnMouseEnter = function(sender)
+        self:onBtnMouseEnter(sender)
+    end
+
+    self.frm.PlayersEditorBtn.OnMouseLeave = function(sender)
+        self:onBtnMouseLeave(sender)
+    end
+
+    self.frm.PlayersEditorBtn.OnPaint = function(sender)
+        self:onPaintButton(sender)
     end
 
 end
