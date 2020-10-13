@@ -2,6 +2,7 @@
 Don't use it in online game modes!
 
 I recommend to use [Cheat Engine 6.8.1](https://mega.nz/file/JEtTTCiD#h-Py9TT5OhuJkvGq7-Sd96UaD14QA62MRfVvc30Iy8A) for this cheat table.
+Turn off your internet before you run its installer to avoid installing the unwanted software.
 
 ![](https://i.imgur.com/slOHdPc.png)
 
