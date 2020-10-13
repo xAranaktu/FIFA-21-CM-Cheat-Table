@@ -10,7 +10,7 @@ local Logger = {
     min_level = 2
 };
 
-function Logger:new(o, time, fdir, fname, is_debug_mode, print_text, min_level)
+function Logger:new(o, time, fdir, fname, print_text, min_level)
     o = o or {}
     setmetatable(o, self)
     self.__index = self
@@ -19,7 +19,6 @@ function Logger:new(o, time, fdir, fname, is_debug_mode, print_text, min_level)
     self.fname = fname or ("log_" .. string.format("%02d-%02d-%02d", self.time.year, self.time.month, self.time.day) .. ".txt")
     self.fpath = string.format("%s/%s", self.fdir, self.fname)
     self.print_text = print_text or false
-    self.is_debug_mode = is_debug_mode or false
     self.min_level = min_level or 1
 
     self.levels = {
@@ -43,10 +42,10 @@ end
 
 function Logger:_write(level, text, show_message)
     local to_log = string.format("[ %s ] %s - %s\n", self:get_level_text(level), os.date("%c", os.time()), text)
-    if (not self.is_debug_mode) then
+    if (not DEBUG_MODE) then
         fo, err = io.open(self.fpath, "a+")
         if fo == nil then
-            self.is_debug_mode = true;
+            DEBUG_MODE = true;
             self.print_text = true;
 
             print(io.popen"cd":read'*l')
@@ -57,7 +56,7 @@ function Logger:_write(level, text, show_message)
         end
     end
 
-    if (self.print_text) then
+    if (self.print_text or DEBUG_MODE) then
         print(to_log)
     end 
 
@@ -68,7 +67,7 @@ end
 
 function Logger:debug(text, show_message)
     local level = 1;
-    if level >= self.min_level then
+    if DEBUG_MODE then
         self:_write(level, text, show_message);
     end
 end

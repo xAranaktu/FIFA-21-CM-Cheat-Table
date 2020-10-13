@@ -1,3 +1,13 @@
+function onScriptActivate()
+    -- Check if user has set up CT correctly
+    -- local status, error = pcall(gCTManager:memory_manager:get_validated_address)
+    -- if not status then
+    --     showMessage('Error during script activation, error:\n' .. error)
+    --     print("Read guide to avoid problems like this: https://github.com/xAranaktu/FIFA-20-Live-Editor/wiki/Getting-Started")
+    --     assert(false, error)
+    -- end
+end
+
 function getProcessNameFromProcessID(iProcessID)
     if iProcessID < 1 then return 0 end
     local plist = createStringlist()
@@ -14,11 +24,11 @@ end
   
 function getOpenedProcessName()
     local process = getOpenedProcessID()
-    if process ~= 0 and getProcessIDFromProcessName(DefaultProccessName) == getOpenedProcessID() then
-        if checkOpenedProcess(DefaultProccessName) == true then return DefaultProccessName end
-        return 0
+    if process ~= 0 and getProcessIDFromProcessName(nil) == getOpenedProcessID() then
+        if checkOpenedProcess(nil) == true then return nil end
+        return nil
     end
-    return getProcessNameFromProcessID(getOpenedProcessID())
+    return getProcessNameFromProcessID(process)
 end
 
 function deepcopy(orig)
@@ -86,4 +96,14 @@ function toBits(num)
         num=(num-rest)/2
     end
     return string.reverse(table.concat(t))
+end
+
+
+function deactive_all(record)
+    for i=0, record.Count-1 do
+        if record[i].Active then record[i].Active = false end
+        if record.Child[i].Count > 0 then
+            deactive_all(record.Child[i])
+        end
+    end
 end

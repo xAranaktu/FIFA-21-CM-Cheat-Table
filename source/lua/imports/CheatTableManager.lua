@@ -5,9 +5,11 @@ local LIP = require 'lua/requirements/LIP';
 
 local Logger = require 'lua/imports/logger';
 local MemoryManager = require 'lua/imports/MemoryManager';
+local GameDBManager = require 'lua/imports/GameDBManager';
 
 local mainFormManager = require 'lua/GUI/forms/mainform/manager';
 local settingsFormManager = require 'lua/GUI/forms/settingsform/manager';
+local playersEditorFormManager = require 'lua/GUI/forms/playerseditorform/manager';
 
 local TableManager = {}
 
@@ -23,6 +25,7 @@ function TableManager:new(o)
     end
     
     self.memory_manager = MemoryManager:new(nil, self.logger, save_offsets_callback)
+    self.game_db_manager = GameDBManager:new(nil, self.logger, self.memory_manager)
 
     self.FIFA_year = 21
     self.game_name = "FIFA 21"
@@ -184,6 +187,10 @@ function TableManager:get_forms_map()
             mgr = settingsFormManager,
             frm = SettingsForm
         },
+        playerseditor_form = {
+            mgr = playersEditorFormManager,
+            frm = PlayersEditorForm
+        }
     }
 end
 
@@ -195,18 +202,15 @@ function TableManager:setup_forms()
         self:save_cfg(cfg)
     end
 
-
     for k, v in pairs(forms_map) do
         self.form_managers[k] = v.mgr
+        self.logger:debug(string.format("%s manager setup", k))
         v.mgr:setup({
             name=k,
             frm_obj=v.frm,
             logger=self.logger
         })
     end
-
-
-
 end
 
 function TableManager:style_forms()
@@ -286,14 +290,6 @@ function TableManager:hide_mem_scanner()
     end
 end
 
-function TableManager:deactive_all(record)
-    for i=0, record.Count-1 do
-        if record[i].Active then record[i].Active = false end
-        if record.Child[i].Count > 0 then
-            deactive_all(record.Child[i])
-        end
-    end
-end
 
 function TableManager:can_autoactivate(script_id)
     local not_allowed_to_aa = {
@@ -309,12 +305,126 @@ function TableManager:can_autoactivate(script_id)
 end
 
 function TableManager:init_ptrs()
-    self.logger:info("TODO init_ptrs")
+    local base_ptr = self.memory_manager:get_validated_resolved_ptr("DatabaseBasePtr", 4)
+    self.logger:debug(string.format("DatabaseBasePtr %X", base_ptr))
+
+    local DB_One_Tables_ptr = self.memory_manager:read_multilevel_pointer(readPointer(base_ptr), {0x10, 0x390})
+    local DB_Two_Tables_ptr = self.memory_manager:read_multilevel_pointer(readPointer(base_ptr), {0x10, 0x3C0})
+    local DB_Three_Tables_ptr = self.memory_manager:read_multilevel_pointer(readPointer(base_ptr), {0x10, 0x3F0})
+
+    self.logger:debug(string.format("DB_One_Tables_ptr %X", DB_One_Tables_ptr))
+    self.logger:debug(string.format("DB_Two_Tables_ptr %X", DB_Two_Tables_ptr))
+    self.logger:debug(string.format("DB_Three_Tables_ptr %X", DB_Three_Tables_ptr))
+
+    -- Bruteforce
+    -- local one = 0xA84D0130
+    -- local two = 0x9F6D00F0
+    -- local three = 0x9F7801E0
+    -- local bruteforce_find = {
+    --     "pPlayersTableCurrentRecord",
+    --     "pTeamplayerlinksTableFirstRecord",
+    --     "pTeamsTableFirstRecord",
+    --     "pLeagueteamlinksTableFirstRecord",
+    --     "pManagerTableFirstRecord",
+    --     "pCareerCalendarTableFirstRecord"
+    -- }
+
+    
+    -- local xxx = 0
+    -- local yyy = 0
+    -- print("one")
+    -- for i=1, 1024 do
+    --     yyy = gCTManager.memory_manager:read_multilevel_pointer(one, {xxx, 0x28, 0x30})
+    --     if yyy ~= nil then
+    --         -- Addr of first record
+    --         for zzz=1, #bruteforce_find do
+    --             if yyy == readPointer(bruteforce_find[zzz]) then
+    --                 gCTManager.logger:debug(string.format("%s %X iiii -> 0x%X", bruteforce_find[zzz], yyy,  xxx))
+    --             end
+    --         end
+    --     end
+    --     xxx = xxx + 8
+    -- end
+    -- local xxx = 0
+    -- local yyy = 0
+    -- print("two")
+    -- for i=1, 1024 do
+    --     yyy = gCTManager.memory_manager:read_multilevel_pointer(two, {xxx, 0x28, 0x30})
+    --     if yyy ~= nil then
+    --         -- Addr of first record
+    --         for zzz=1, #bruteforce_find do
+    --             if yyy == readPointer(bruteforce_find[zzz]) then
+    --                 gCTManager.logger:debug(string.format("%s %X iiii -> 0x%X", bruteforce_find[zzz], yyy,  xxx))
+    --             end
+    --         end
+    --     end
+    --     xxx = xxx + 8
+    -- end
+    -- local xxx = 0
+    -- local yyy = 0
+    -- print("three")
+    -- for i=1, 1024 do
+    --     yyy = gCTManager.memory_manager:read_multilevel_pointer(three, {xxx, 0x28, 0x30})
+    --     if yyy ~= nil then
+    --         -- Addr of first record
+    --         for zzz=1, #bruteforce_find do
+    --             if yyy == readPointer(bruteforce_find[zzz]) then
+    --                 gCTManager.logger:debug(string.format("%s %X iiii -> 0x%X", bruteforce_find[zzz], yyy,  xxx))
+    --             end
+    --         end
+    --     end
+    --     xxx = xxx + 8
+    -- end
+
+    -- Players Table
+    -- local players_firstrecord = self.memory_manager:read_multilevel_pointer(DB_One_Tables_ptr, {0xB8, 0x28, 0x30})
+    -- -- [firstPlayerDataPtr+b8]+28]+30]0
+
+    -- self.logger:debug(string.format("players_firstrecord %X", players_firstrecord))
+    -- writeQword("pPlayersTableFirstRecord", players_firstrecord)
+    -- writeQword("pPlayersTableCurrentRecord", players_firstrecord)
+
+    self.game_db_manager:add_table(
+        "players",
+        self.memory_manager:read_multilevel_pointer(DB_One_Tables_ptr, {0xB8, 0x28}),
+        {"pPlayersTableCurrentRecord", "pPlayersTableFirstRecord"}
+    )
+
+    self.game_db_manager:add_table(
+        "manager",
+        self.memory_manager:read_multilevel_pointer(DB_One_Tables_ptr, {0x78, 0x28}),
+        {"pManagerTableCurrentRecord", "pManagerTableFirstRecord"}
+    )
+
+    self.game_db_manager:add_table(
+        "teams",
+        self.memory_manager:read_multilevel_pointer(DB_One_Tables_ptr, {0xE8, 0x28}),
+        {"pTeamsTableCurrentRecord", "pTeamsTableFirstRecord"}
+    )
+
+    self.game_db_manager:add_table(
+        "teamplayerlinks",
+        self.memory_manager:read_multilevel_pointer(DB_One_Tables_ptr, {0x128, 0x28}),
+        {"pTeamplayerlinksTableFirstRecord", "pTeamplayerlinksTableFirstRecord"}
+    )
+
+    self.game_db_manager:add_table(
+        "leagueteamlinks",
+        self.memory_manager:read_multilevel_pointer(DB_One_Tables_ptr, {0x158, 0x28}),
+        {"pLeagueteamlinksTableCurrentRecord", "pLeagueteamlinksTableFirstRecord"}
+    )
+
+    self.game_db_manager:add_table(
+        "career_calendar",
+        self.memory_manager:read_multilevel_pointer(DB_Two_Tables_ptr, {0xB8, 0x28}),
+        {"pCareerCalendarTableCurrentRecord", "pCareerCalendarTableFirstRecord"}
+    )
 end
 
 function TableManager:autoactivate_scripts()
     local always_activate = {
-        0
+        18, -- Scripts
+        214 -- Hidden FIFA DB Tables
     }
 
     for i=1, #always_activate do
@@ -467,7 +577,7 @@ function TableManager:on_attach_to_process()
         self:check_for_ct_update()
     end
 
-    self.ptrs["screen_id"] = self.memory_manager:get_validated_resolved_ptr("ScreenID", 4)
+    self.ptrs["screen_id"] = self.memory_manager:get_validated_resolved_ptr("ScreenID", 3)
     self:log_screen_id()
 
     self.logger:info("Waiting for valid screen")
@@ -529,6 +639,9 @@ function TableManager:start()
     end
 
     self.cfg = self:load_config()
+
+    DEBUG_MODE = self.cfg.flags.debug_mode
+
     self.offsets = self:load_offsets()
 
     local forms_map = self:get_forms_map()

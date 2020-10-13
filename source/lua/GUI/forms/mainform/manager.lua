@@ -44,8 +44,34 @@ function thisFormManager:onCEClick()
 
 end
 
+function thisFormManager:OnWindowCloseClick(sender)
+    local addrlist = getAddressList()
+    -- Deactivate scripts on Exit while in DEBUG MODE
+    if DEBUG_MODE then
+        local scripts_record = addrlist.getMemoryRecordByDescription('Scripts')
+        deactive_all(scripts_record)
+
+        -- Deactivate hidden stuff too
+        deactive_all(addrlist.getMemoryRecordByID(13))
+
+        scripts_record.Active = false
+        -- Deactivate CURRENT_DATE_SCRIPT
+        -- ADDR_LIST.getMemoryRecordByID(CT_MEMORY_RECORDS['CURRENT_DATE_SCRIPT']).Active = false
+
+        -- Deactivate hook loadlibrary & exit cm
+        -- ADDR_LIST.getMemoryRecordByID(4831).Active = false
+    end
+    -- Deactivate "GUI" script
+    addrlist.getMemoryRecordByID(CT_MEMORY_RECORDS['GUI_SCRIPT']).Active = false
+    self.frm.close()
+end
+
 function thisFormManager:assign_current_form_events()
     self:assign_events()
+
+    self.frm.Exit.OnClick = function(sender)
+        self:OnWindowCloseClick(sender)
+    end
 
     self.frm.LiveEditorBanner.OnClick = function(sender)
         shellExecute("https://www.patreon.com/xAranaktu/posts?filters[tag]=Live Editor 21")
@@ -68,7 +94,8 @@ function thisFormManager:assign_current_form_events()
     end
 
     self.frm.PlayersEditorBtn.OnClick = function(sender)
-        print("Click Players Editor")
+        -- PlayersEditorForm.show()
+        ShowMessage("Players Editor is not ready yet.\nWill be updated in one of the next updates.\nCheck Patreon/Discord to not miss it.")
     end
 
     self.frm.PlayersEditorBtn.OnMouseEnter = function(sender)

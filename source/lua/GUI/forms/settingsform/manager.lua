@@ -169,7 +169,6 @@ function thisFormManager:assign_current_form_events()
         self:onShow(sender)
     end
 
-
     self.frm.RestoreDefaultSettingsButton.OnClick = function(sender)
     end
     self.frm.ClearCacheButton.OnClick = function(sender)

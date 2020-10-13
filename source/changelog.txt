@@ -1,0 +1,14 @@
+v21.1.0.0:
+    - Added "Non-CM Related":
+        - "Dont Pause Game on AltTab
+
+    - Added "Database Tables":
+        - "Players Table"
+        - "Teamplayerlinks Table"
+        - "Teams Table"
+        - "Leagueteamlinks Table"
+        - "Manager Table"
+        - "Career_calendar Table"
+
+    - Added "Play As Player"
+        - "Positive decision on transfer request"

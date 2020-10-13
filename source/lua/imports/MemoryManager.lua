@@ -126,6 +126,23 @@ function MemoryManager:AOBScanModule(aob, module_name, module_size)
     return foundlist
 end
 
+function MemoryManager:read_multilevel_pointer(base_addr, offsets)
+    for i=1, #offsets do
+        --self.logger:debug(string.format("read_multilevel_pointer %X", base_addr))
+        if base_addr == 0 or base_addr == nil then
+            --self.logger:warning(string.format("Invalid PTR: offset: %d", i))
+            --self.logger:warning("All offsets")
+            --for j=1, #offsets do
+            --    self.logger:warning(string.format("%X", offsets[j]))
+            --end
+            return 0
+        end
+        --self.logger:debug(string.format("readPointer 0x%X + 0x%X", base_addr, offsets[i]))
+        base_addr = readPointer(base_addr+offsets[i])
+    end
+    return base_addr
+end
+
 function MemoryManager:get_offset(base_addr, addr)
     return string.format('%X',tonumber(addr, 16) - base_addr)
 end
@@ -175,7 +192,7 @@ function MemoryManager:update_offset(name, save, module_name, module_size, secti
         end
     else
         self.offsets[name] = self:get_offset(base_addr, res[0])
-        self.logger:info(string.format("New Offset for %s - %s", name, offset))
+        self.logger:info(string.format("New Offset for %s - 0x%s", name, self.offsets[name]))
     end
     res.destroy()
     if save then self:save_offsets() end
