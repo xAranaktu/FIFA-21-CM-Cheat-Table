@@ -202,6 +202,8 @@ function TableManager:setup_forms()
         self:save_cfg(cfg)
     end
 
+    playersEditorFormManager.game_db_manager = self.game_db_manager
+
     for k, v in pairs(forms_map) do
         self.form_managers[k] = v.mgr
         self.logger:debug(string.format("%s manager setup", k))
@@ -607,6 +609,12 @@ end
 function TableManager:auto_attach_to_process()
     local proc_name = self.cfg.game.name
     local trial_name = self.cfg.game.name_trial
+
+    if not proc_name and not trial_name then
+        local critical_error = "Auto attach error. No proc name. Problem with config.ini?"
+        self.logger:critical(critical_error)
+        assert(false, critical_error)
+    end
 
     if getProcessIDFromProcessName(proc_name) ~= nil then
         openProcess(proc_name)
