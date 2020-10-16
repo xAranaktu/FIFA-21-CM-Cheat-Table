@@ -8,6 +8,35 @@ function onScriptActivate()
     -- end
 end
 
+function days_to_date(days)
+    local result = {
+        day = 0,
+        month = 0,
+        year = 0
+    }
+
+    local a, b, c, d, e, m
+    a = days + 2331205
+    b = math.floor((4*a+3)/146097)
+    c = math.floor((-b * 146097 / 4) + a)
+    d = math.floor((4 * c + 3)/1461)
+    e = math.floor(-1461 * d / 4 + c)
+    m = math.floor((5*e+2)/153)
+    
+    result["day"] = math.ceil(-(153 * m + 2) / 5) + e + 1
+    result["month"] = math.ceil(-m / 10) * 12 + m + 3
+    result["year"] = b * 100 + d - 4800 + math.floor(m / 10)
+
+    return result
+end
+
+function date_to_days(date)
+    local a = math.floor((14 - date["month"]) / 12)
+    local m = date["month"] + 12 * a - 3;
+    local y = date["year"] + 4800 - a;
+    return date["day"] + math.floor((153 * m + 2) / 5) + y * 365 + math.floor(y/4) - math.floor(y/100) + round(y/400) - 2331205;
+end
+
 function getProcessNameFromProcessID(iProcessID)
     if iProcessID < 1 then return 0 end
     local plist = createStringlist()

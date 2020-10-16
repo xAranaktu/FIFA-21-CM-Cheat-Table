@@ -421,10 +421,31 @@ function TableManager:init_ptrs()
         self.memory_manager:read_multilevel_pointer(DB_Two_Tables_ptr, {0xB8, 0x28}),
         {"pCareerCalendarTableCurrentRecord", "pCareerCalendarTableFirstRecord"}
     )
+
+    local base_ptr2 = self.memory_manager:get_validated_resolved_ptr("BASE_FORM_MORALE_RLC", 3)
+    self.logger:debug(string.format("MoraleBasePtr %X", base_ptr2))
+    writeQword("basePtrTeamFormMoraleRLC", base_ptr2)
+
+    local form_ptr = self.memory_manager:read_multilevel_pointer(
+        readPointer("basePtrTeamFormMoraleRLC"),
+        {0x0, 0x518, 0x0, 0x20, 0x130, 0x140}
+    ) -- +28 - n on players
+
+    local morale_ptr = self.memory_manager:read_multilevel_pointer(
+        readPointer("basePtrTeamFormMoraleRLC"),
+        {0x0, 0x518, 0x0, 0x20, 0x168}
+    ) -- +4A0 - teamid
+    -- Start list = teamid + 10
+    -- end list = teamid + 18
+    
+
+    self.logger:debug(string.format("form_ptr %X", form_ptr))
+    self.logger:debug(string.format("morale_ptr %X", morale_ptr))
 end
 
 function TableManager:autoactivate_scripts()
     local always_activate = {
+        14, -- Globals
         18, -- Scripts
         214 -- Hidden FIFA DB Tables
     }
