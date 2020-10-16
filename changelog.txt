@@ -57,3 +57,11 @@ v21.1.0.3:
             - NeverTired players
             - Tired players
             - Goals scored
+
+v21.1.0.4:
+    - Fixed saving settings
+    - Fully working basic players editor (GUI -> Players Editor)
+    - Removed Disable Player Growth Manager
+    - Added "Players Development"
+        - "Bonus Exp"
+        - "Exp Multiplier"
