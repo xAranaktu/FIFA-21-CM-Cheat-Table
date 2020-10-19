@@ -166,15 +166,21 @@ function MemoryManager:update_offset(name, save, module_name, module_size, secti
         base_addr = getAddress(module_name)
     end
     
-    self.logger:info(string.format("AOBScanModule %s", name))
+    self.logger:info(string.format("AOBScanModule, pattern for %s", name))
+
+    local pat = getfield(string.format('AOB_PATTERNS.%s', name))
+    if not pat then
+        self.logger:error(string.format("No AOB for %s", name))
+    end
+    self.logger:info(pat)
     local res = self:AOBScanModule(
-        getfield(string.format('AOB_PATTERNS.%s', name)),
+        pat,
         module_name,
         module_size
     )
     local res_count = res.getCount()
     if res_count == 0 then 
-        self.logger:error(string.format("%s AOBScanModule error. Try to restart FIFA and Cheat Engine", name))
+        self.logger:error(string.format("%s AOBScanModule error. Pattern not found. Try to restart FIFA and Cheat Engine", name))
         return false
     elseif res_count > 1 then
         self.logger:warning(string.format("%s AOBScanModule multiple matches - %i found", name, res_count))
@@ -277,7 +283,7 @@ function MemoryManager:get_validated_address(name, module_name, section)
     end
     
     if not validated_address then
-        if not self:update_offset(name, true) then assert(false, string.format('Could not find valid offset for', name)) end
+        if not self:update_offset(name, true) then assert(false, string.format('Could not find valid offset for: %s', name)) end
         validated_address = self:get_address_with_offset(
             self.base_address, self.offsets[name]
         )

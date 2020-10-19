@@ -8,6 +8,10 @@ function onScriptActivate()
     -- end
 end
 
+function math.round(n)
+    return n % 1 >= 0.5 and math.ceil(n) or math.floor(n)
+end
+
 function days_to_date(days)
     local result = {
         day = 0,
@@ -34,7 +38,7 @@ function date_to_days(date)
     local a = math.floor((14 - date["month"]) / 12)
     local m = date["month"] + 12 * a - 3;
     local y = date["year"] + 4800 - a;
-    return date["day"] + math.floor((153 * m + 2) / 5) + y * 365 + math.floor(y/4) - math.floor(y/100) + round(y/400) - 2331205;
+    return date["day"] + math.floor((153 * m + 2) / 5) + y * 365 + math.floor(y/4) - math.floor(y/100) + math.floor(y/400) - 2331205;
 end
 
 function getProcessNameFromProcessID(iProcessID)

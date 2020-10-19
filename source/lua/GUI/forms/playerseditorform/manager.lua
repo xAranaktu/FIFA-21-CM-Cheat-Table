@@ -34,10 +34,252 @@ function thisFormManager:new(o)
     return o;
 end
 
+function thisFormManager:find_player_club_team_record(playerid)
+    if type(playerid) == 'string' then
+        playerid = tonumber(playerid)
+    end
+
+    -- - 78, International
+    -- - 2136, International Women
+    -- - 76, Rest of World
+    -- - 383, Create Player League
+    local invalid_leagues = {
+        76, 78, 2136, 383
+    }
+
+    local arr_flds = {
+        {
+            name = "playerid",
+            expr = "eq",
+            values = {playerid}
+        }
+    }
+
+    local addr = self.game_db_manager:find_record_addr(
+        "teamplayerlinks", arr_flds
+    )
+
+    if #addr <= 0 then
+        self.logger:warning(string.format("No teams for playerid: %d", playerid))
+        return 0
+    end
+
+    local fnIsLeagueValid = function(invalid_leagues, leagueid)
+        for j=1, #invalid_leagues do
+            local invalid_leagueid = invalid_leagues[j]
+            if invalid_leagueid == leagueid then return false end
+        end
+        return true
+    end
+
+    for i=1, #addr do
+        local found_addr = addr[i]
+        local teamid = self.game_db_manager:get_table_record_field_value(found_addr, "teamplayerlinks", "teamid")
+        local arr_flds_2 = {
+            {
+                name = "teamid",
+                expr = "eq",
+                values = {teamid}
+            }
+        }
+        local found_addr2 = self.game_db_manager:find_record_addr(
+            "leagueteamlinks", arr_flds_2, 1
+        )[1]
+        local leagueid = self.game_db_manager:get_table_record_field_value(found_addr2, "leagueteamlinks", "leagueid")
+        if fnIsLeagueValid(invalid_leagues, leagueid) then
+            self.logger:debug(string.format("found: %X, teamid: %d, leagueid: %d", found_addr, teamid, leagueid))
+            writeQword("pTeamplayerlinksTableCurrentRecord", found_addr)
+            return found_addr
+        end 
+    end
+
+    self.logger:warning(string.format("No club teams for playerid: %d", playerid))
+    return 0
+end
+
+function thisFormManager:find_player_by_id(playerid)
+    if type(playerid) == 'string' then
+        playerid = tonumber(playerid)
+    end
+
+    local arr_flds = {
+        {
+            name = "playerid",
+            expr = "eq",
+            values = {playerid}
+        }
+    }
+
+    local addr = self.game_db_manager:find_record_addr(
+        "players", arr_flds, 1 
+    )
+    for i=1, #addr do
+        self.logger:debug(string.format("found: %X", addr[i]))
+    end
+
+    writeQword("pPlayersTableCurrentRecord", addr[1])
+
+    return #addr > 0
+end
+
+function thisFormManager:update_total_stats()
+    local sum = 0
+    local attr_panel = self.frm.AttributesPanel
+    for i = 0, attr_panel.ControlCount-1 do
+        for j=0, attr_panel.Control[i].ControlCount-1 do
+            local comp = attr_panel.Control[i].Control[j]
+            if comp.ClassName == 'TCEEdit' then
+                sum = sum + tonumber(comp.Text)
+            end
+        end
+    end
+
+    if sum > 3366 then
+        sum = 3366
+    elseif sum < 0 then
+        sum = 0
+    end
+
+    self.frm.TotalStatsValueLabel.Caption = string.format(
+        "%d / 3366", sum
+    )
+    self.frm.TotalStatsValueBar.Position = sum
+end
+
+function thisFormManager:recalculate_ovr(update_ovr_edit)
+    local preferred_position_id = self.frm.PreferredPosition1CB.ItemIndex
+    if preferred_position_id == 1 then return end -- ignore SW
+
+    -- top 3 values will be put in "Best At"
+    local unique_ovrs = {}
+    local top_ovrs = {}
+
+    local calculated_ovrs = {}
+    for posid, attributes in pairs(OVR_FORMULA) do
+        local sum = 0
+        for attr, perc in pairs(attributes) do
+            local attr_val = tonumber(self.frm[attr].Text)
+            if attr_val == nil then
+                return
+            end
+            sum = sum + (attr_val * perc)
+        end
+        sum = math.round(sum)
+        unique_ovrs[sum] = sum
+
+        calculated_ovrs[posid] = sum
+    end
+    if update_ovr_edit then
+        self.frm.OverallEdit.Text = calculated_ovrs[string.format("%d", preferred_position_id)] + tonumber(self.frm.ModifierEdit.Text)
+    end
+
+    for k,v in pairs(unique_ovrs) do
+        table.insert(top_ovrs, k)
+    end
+
+    table.sort(top_ovrs, function(a,b) return a>b end)
+
+    -- Fill "Best At"
+    local position_names = {
+        ['1'] = {
+            short = {},
+            long = {},
+            showhint = false
+        },
+        ['2'] = {
+            short = {},
+            long = {},
+            showhint = false
+        },
+        ['3'] = {
+            short = {},
+            long = {},
+            showhint = false
+        }
+    }
+    -- remove useless pos
+    local not_show = {
+        4,6,9,11,13,15,17,19
+    }
+    for posid, ovr in pairs(calculated_ovrs) do
+        for i = 1, #not_show do
+            if tonumber(posid) == not_show[i] then
+                goto continue
+            end
+        end
+        for i = 1, 3 do
+            if ovr == top_ovrs[i] then
+                if #position_names[string.format("%d", i)]['short'] <= 2 then
+                    table.insert(position_names[string.format("%d", i)]['short'], self.frm.PreferredPosition1CB.Items[tonumber(posid)])
+                elseif #position_names[string.format("%d", i)]['short'] == 3 then
+                    table.insert(position_names[string.format("%d", i)]['short'], '...')
+                    position_names[string.format("%d", i)]['showhint'] = true
+                end
+                table.insert(position_names[string.format("%d", i)]['long'], self.frm.PreferredPosition1CB.Items[tonumber(posid)])
+            end
+        end
+        ::continue::
+    end
+
+    for i = 1, 3 do
+        if top_ovrs[i] then
+            self.frm[string.format("BestPositionLabel%d", i)].Caption = string.format("- %s: %d ovr", table.concat(position_names[string.format("%d", i)]['short'], '/'), top_ovrs[i])
+            if position_names[string.format("%d", i)]['showhint'] then
+                self.frm[string.format("BestPositionLabel%d", i)].Hint = string.format("- %s: %d ovr", table.concat(position_names[string.format("%d", i)]['long'], '/'), top_ovrs[i])
+                self.frm[string.format("BestPositionLabel%d", i)].ShowHint = true
+            else
+                self.frm[string.format("BestPositionLabel%d", i)].ShowHint = false
+            end
+        else
+            self.frm[string.format("BestPositionLabel%d", i)].Caption = '-'
+            self.frm[string.format("BestPositionLabel%d", i)].ShowHint = false
+        end
+    end
+
+    self:update_total_stats()
+end
+
+function thisFormManager:roll_random_attributes(components)
+    self.has_unsaved_changes = true
+    for i=1, #components do
+        -- tmp disable onchange event
+        local onchange_event = self.frm[components[i]].OnChange
+        self.frm[components[i]].OnChange = nil
+        self.frm[components[i]].Text = math.random(ATTRIBUTE_BOUNDS['min'], ATTRIBUTE_BOUNDS['max'])
+        self.frm[components[i]].OnChange = onchange_event
+    end
+    self:update_trackbar(self.frm[components[1]])
+    self:recalculate_ovr(true)
+end
+
 function thisFormManager:get_components_description()
     local fnCommonOnChange = function(sender)
         self.has_unsaved_changes = true
     end
+
+    local fnOnChangeAttribute = function(sender)
+        if sender.Text == '' then return end
+        self.has_unsaved_changes = true
+
+        local new_val = tonumber(sender.Text)
+        if new_val == nil then
+            -- only numbers
+            new_val = math.random(ATTRIBUTE_BOUNDS['min'],ATTRIBUTE_BOUNDS['max'])
+        elseif new_val > ATTRIBUTE_BOUNDS['max'] then
+            new_val = ATTRIBUTE_BOUNDS['max']
+        elseif new_val < ATTRIBUTE_BOUNDS['min'] then
+            new_val = ATTRIBUTE_BOUNDS['min']
+        end
+        sender.Text = new_val
+
+        self:update_trackbar(sender)
+        self:recalculate_ovr(true)
+    end
+
+    local fnOnChangeTrait = function(sender)
+        self.has_unsaved_changes = true
+    end
+
     local fnCommonDBValGetter = function(addrs, table_name, field_name, raw)
         local addr = addrs[table_name]
         return self.game_db_manager:get_table_record_field_value(addr, table_name, field_name, raw)
@@ -69,6 +311,10 @@ function thisFormManager:get_components_description()
                 self.frm[comp_desc['depends_on'][i]].OnChange = onchange_event
             end
         end
+
+        lbl.Caption = new_val
+        sender.SelEnd = new_val
+        self:recalculate_ovr(true)
     end
 
     local fnTraitCheckbox = function(addrs, comp_desc)
@@ -487,7 +733,7 @@ function thisFormManager:get_components_description()
             },
             events = {
                 OnChange = AttributesTrackBarOnChange,
-            },
+            }
         },
         -- Attributes
         CrossingEdit = {
@@ -498,7 +744,7 @@ function thisFormManager:get_components_description()
             group = 'Attack',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         FinishingEdit = {
@@ -509,7 +755,7 @@ function thisFormManager:get_components_description()
             group = 'Attack',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         HeadingAccuracyEdit = {
@@ -520,7 +766,7 @@ function thisFormManager:get_components_description()
             group = 'Attack',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         ShortPassingEdit = {
@@ -531,7 +777,7 @@ function thisFormManager:get_components_description()
             group = 'Attack',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         VolleysEdit = {
@@ -542,7 +788,20 @@ function thisFormManager:get_components_description()
             group = 'Attack',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
+            }
+        },
+        DefendingTrackBar = {
+            valGetter = AttributesTrackBarVal,
+            group = 'Defending',
+            components_inheriting_value = {
+                "DefendingValueLabel",
+            },
+            depends_on = {
+                "MarkingEdit", "StandingTackleEdit", "SlidingTackleEdit",
+            },
+            events = {
+                OnChange = AttributesTrackBarOnChange,
             }
         },
 
@@ -554,7 +813,7 @@ function thisFormManager:get_components_description()
             group = 'Defending',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         StandingTackleEdit = {
@@ -565,7 +824,7 @@ function thisFormManager:get_components_description()
             group = 'Defending',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         SlidingTackleEdit = {
@@ -576,7 +835,21 @@ function thisFormManager:get_components_description()
             group = 'Defending',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
+            }
+        },
+        SkillTrackBar = {
+            valGetter = AttributesTrackBarVal,
+            group = 'Skill',
+            components_inheriting_value = {
+                "SkillValueLabel",
+            },
+            depends_on = {
+                "DribblingEdit", "CurveEdit", "FreeKickAccuracyEdit",
+                "LongPassingEdit", "BallControlEdit",
+            },
+            events = {
+                OnChange = AttributesTrackBarOnChange,
             }
         },
 
@@ -588,7 +861,7 @@ function thisFormManager:get_components_description()
             group = 'Skill',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         CurveEdit = {
@@ -599,7 +872,7 @@ function thisFormManager:get_components_description()
             group = 'Skill',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         FreeKickAccuracyEdit = {
@@ -610,7 +883,7 @@ function thisFormManager:get_components_description()
             group = 'Skill',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         LongPassingEdit = {
@@ -621,7 +894,7 @@ function thisFormManager:get_components_description()
             group = 'Skill',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         BallControlEdit = {
@@ -632,7 +905,21 @@ function thisFormManager:get_components_description()
             group = 'Skill',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
+            }
+        },
+        GoalkeeperTrackBar = {
+            valGetter = AttributesTrackBarVal,
+            group = 'Goalkeeper',
+            components_inheriting_value = {
+                "GoalkeeperValueLabel",
+            },
+            depends_on = {
+                "GKDivingEdit", "GKHandlingEdit", "GKKickingEdit",
+                "GKPositioningEdit", "GKReflexEdit",
+            },
+            events = {
+                OnChange = AttributesTrackBarOnChange,
             }
         },
 
@@ -644,7 +931,7 @@ function thisFormManager:get_components_description()
             group = 'Goalkeeper',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         GKHandlingEdit = {
@@ -655,7 +942,7 @@ function thisFormManager:get_components_description()
             group = 'Goalkeeper',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         GKKickingEdit = {
@@ -666,7 +953,7 @@ function thisFormManager:get_components_description()
             group = 'Goalkeeper',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         GKPositioningEdit = {
@@ -677,7 +964,7 @@ function thisFormManager:get_components_description()
             group = 'Goalkeeper',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         GKReflexEdit = {
@@ -688,7 +975,21 @@ function thisFormManager:get_components_description()
             group = 'Goalkeeper',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
+            }
+        },
+        PowerTrackBar = {
+            valGetter = AttributesTrackBarVal,
+            group = 'Power',
+            components_inheriting_value = {
+                "PowerValueLabel",
+            },
+            depends_on = {
+                "ShotPowerEdit", "JumpingEdit", "StaminaEdit",
+                "StrengthEdit", "LongShotsEdit",
+            },
+            events = {
+                OnChange = AttributesTrackBarOnChange,
             }
         },
 
@@ -700,7 +1001,7 @@ function thisFormManager:get_components_description()
             group = 'Power',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         JumpingEdit = {
@@ -711,7 +1012,7 @@ function thisFormManager:get_components_description()
             group = 'Power',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         StaminaEdit = {
@@ -722,7 +1023,7 @@ function thisFormManager:get_components_description()
             group = 'Power',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         StrengthEdit = {
@@ -733,7 +1034,7 @@ function thisFormManager:get_components_description()
             group = 'Power',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         LongShotsEdit = {
@@ -744,7 +1045,21 @@ function thisFormManager:get_components_description()
             group = 'Power',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
+            }
+        },
+        MovementTrackBar = {
+            valGetter = AttributesTrackBarVal,
+            group = 'Movement',
+            components_inheriting_value = {
+                "MovementValueLabel",
+            },
+            depends_on = {
+                "AccelerationEdit", "SprintSpeedEdit", "AgilityEdit",
+                "ReactionsEdit", "BalanceEdit",
+            },
+            events = {
+                OnChange = AttributesTrackBarOnChange,
             }
         },
 
@@ -756,7 +1071,7 @@ function thisFormManager:get_components_description()
             group = 'Movement',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         SprintSpeedEdit = {
@@ -767,7 +1082,7 @@ function thisFormManager:get_components_description()
             group = 'Movement',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         AgilityEdit = {
@@ -778,7 +1093,7 @@ function thisFormManager:get_components_description()
             group = 'Movement',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         ReactionsEdit = {
@@ -789,7 +1104,7 @@ function thisFormManager:get_components_description()
             group = 'Movement',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         BalanceEdit = {
@@ -800,7 +1115,21 @@ function thisFormManager:get_components_description()
             group = 'Movement',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
+            }
+        },
+        MentalityTrackBar = {
+            valGetter = AttributesTrackBarVal,
+            group = 'Mentality',
+            components_inheriting_value = {
+                "MentalityValueLabel",
+            },
+            depends_on = {
+                "AggressionEdit", "ComposureEdit", "InterceptionsEdit",
+                "AttackPositioningEdit", "VisionEdit", "PenaltiesEdit",
+            },
+            events = {
+                OnChange = AttributesTrackBarOnChange,
             }
         },
 
@@ -812,7 +1141,7 @@ function thisFormManager:get_components_description()
             group = 'Mentality',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         ComposureEdit = {
@@ -823,7 +1152,7 @@ function thisFormManager:get_components_description()
             group = 'Mentality',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         InterceptionsEdit = {
@@ -834,7 +1163,7 @@ function thisFormManager:get_components_description()
             group = 'Mentality',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         AttackPositioningEdit = {
@@ -845,7 +1174,7 @@ function thisFormManager:get_components_description()
             group = 'Mentality',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         VisionEdit = {
@@ -856,7 +1185,7 @@ function thisFormManager:get_components_description()
             group = 'Mentality',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
         PenaltiesEdit = {
@@ -867,7 +1196,7 @@ function thisFormManager:get_components_description()
             group = 'Mentality',
             valGetter = fnCommonDBValGetter,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeAttribute
             }
         },
 
@@ -879,7 +1208,7 @@ function thisFormManager:get_components_description()
             trait_bit = 0,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         PowerFreeKickCB = {
@@ -890,7 +1219,7 @@ function thisFormManager:get_components_description()
             trait_bit = 1,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         InjuryProneCB = {
@@ -901,7 +1230,7 @@ function thisFormManager:get_components_description()
             trait_bit = 2,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         SolidPlayerCB = {
@@ -912,7 +1241,7 @@ function thisFormManager:get_components_description()
             trait_bit = 3,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         LeadershipCB = {
@@ -923,7 +1252,7 @@ function thisFormManager:get_components_description()
             trait_bit = 6,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         EarlyCrosserCB = {
@@ -934,7 +1263,7 @@ function thisFormManager:get_components_description()
             trait_bit = 7,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         FinesseShotCB = {
@@ -945,7 +1274,7 @@ function thisFormManager:get_components_description()
             trait_bit = 8,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         FlairCB = {
@@ -956,7 +1285,7 @@ function thisFormManager:get_components_description()
             trait_bit = 9,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         SpeedDribblerCB = {
@@ -967,7 +1296,7 @@ function thisFormManager:get_components_description()
             trait_bit = 12,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         GKLongthrowCB = {
@@ -978,7 +1307,7 @@ function thisFormManager:get_components_description()
             trait_bit = 14,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         PowerheaderCB = {
@@ -989,7 +1318,7 @@ function thisFormManager:get_components_description()
             trait_bit = 15,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         GiantthrowinCB = {
@@ -1000,7 +1329,7 @@ function thisFormManager:get_components_description()
             trait_bit = 16,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         OutsitefootshotCB = {
@@ -1011,7 +1340,7 @@ function thisFormManager:get_components_description()
             trait_bit = 17,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         SwervePassCB = {
@@ -1022,7 +1351,7 @@ function thisFormManager:get_components_description()
             trait_bit = 18,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         SecondWindCB = {
@@ -1033,7 +1362,7 @@ function thisFormManager:get_components_description()
             trait_bit = 19,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         FlairPassesCB = {
@@ -1044,7 +1373,7 @@ function thisFormManager:get_components_description()
             trait_bit = 20,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         BicycleKicksCB = {
@@ -1055,7 +1384,7 @@ function thisFormManager:get_components_description()
             trait_bit = 21,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         GKFlatKickCB = {
@@ -1066,7 +1395,7 @@ function thisFormManager:get_components_description()
             trait_bit = 22,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         OneClubPlayerCB = {
@@ -1077,7 +1406,7 @@ function thisFormManager:get_components_description()
             trait_bit = 23,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         TeamPlayerCB = {
@@ -1088,7 +1417,7 @@ function thisFormManager:get_components_description()
             trait_bit = 24,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         RushesOutOfGoalCB = {
@@ -1099,7 +1428,7 @@ function thisFormManager:get_components_description()
             trait_bit = 27,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         CautiousWithCrossesCB = {
@@ -1110,7 +1439,7 @@ function thisFormManager:get_components_description()
             trait_bit = 28,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         ComesForCrossessCB = {
@@ -1121,7 +1450,7 @@ function thisFormManager:get_components_description()
             trait_bit = 29,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
 
@@ -1133,7 +1462,7 @@ function thisFormManager:get_components_description()
             trait_bit = 1,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         SetPlaySpecialistCB = {
@@ -1144,7 +1473,7 @@ function thisFormManager:get_components_description()
             trait_bit = 2,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         DivesIntoTacklesCB = {
@@ -1155,7 +1484,7 @@ function thisFormManager:get_components_description()
             trait_bit = 4,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         LongPasserCB = {
@@ -1166,7 +1495,7 @@ function thisFormManager:get_components_description()
             trait_bit = 10,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         LongShotTakerCB = {
@@ -1177,7 +1506,7 @@ function thisFormManager:get_components_description()
             trait_bit = 11,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         PlaymakerCB = {
@@ -1188,7 +1517,7 @@ function thisFormManager:get_components_description()
             trait_bit = 13,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         ChipShotCB = {
@@ -1199,7 +1528,7 @@ function thisFormManager:get_components_description()
             trait_bit = 25,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
         TechnicalDribblerCB = {
@@ -1210,7 +1539,7 @@ function thisFormManager:get_components_description()
             trait_bit = 26,
             valGetter = fnTraitCheckbox,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeTrait
             }
         },
 
@@ -1906,7 +2235,7 @@ function thisFormManager:onShow_delayed()
     self.current_addrs["career_calendar"] = readPointer("pCareerCalendarTableCurrentRecord")
 
     self:fill_form(self.current_addrs)
-
+    self:recalculate_ovr(true)
     -- Hide Loading Panel and show components
     self.frm.PlayerInfoTab.Color = "0x001D1618"
     self.frm.PlayerInfoPanel.Visible = true
@@ -1915,9 +2244,57 @@ function thisFormManager:onShow_delayed()
     self.frm.SearchPlayerByID.Visible = true
 end
 
+function thisFormManager:attributes_trackbar_val(args)
+    local component_name = args['component_name']
+    local comp_desc = self.form_components_description[component_name]
+
+    local sum_attr = 0
+    local items = 0
+    if comp_desc['depends_on'] then
+        for i=1, #comp_desc['depends_on'] do
+            items = items + 1
+            if self.frm[comp_desc['depends_on'][i]].Text == '' then
+                local r = self.form_components_description[comp_desc['depends_on'][i]]
+                self.frm[comp_desc['depends_on'][i]].Text = r["valGetter"](
+                    self.current_addrs,
+                    r["db_field"]["table_name"],
+                    r["db_field"]["field_name"],
+                    r["db_field"]["raw_val"]
+                )
+            end
+            sum_attr = sum_attr + tonumber(self.frm[comp_desc['depends_on'][i]].Text)
+        end
+    end
+
+    local result = math.ceil(sum_attr/items)
+    if result > ATTRIBUTE_BOUNDS['max'] then
+        result = ATTRIBUTE_BOUNDS['max']
+    elseif result < ATTRIBUTE_BOUNDS['min'] then
+        result = ATTRIBUTE_BOUNDS['min']
+    end
+
+    return result
+end
+
 function thisFormManager:update_trackbar(sender)
+    self.logger:debug(string.format("update_trackbar: %s", sender.Name))
     local trackBarName = string.format("%sTrackBar", self.form_components_description[sender.Name]['group'])
     local valueLabelName = string.format("%sValueLabel", self.form_components_description[sender.Name]['group'])
+
+    -- recalculate ovr of group of attrs
+    local onchange_func = self.frm[trackBarName].OnChange
+    self.frm[trackBarName].OnChange = nil
+
+    local calc = self:attributes_trackbar_val({
+        component_name = trackBarName,
+    })
+
+    self.frm[trackBarName].Position = calc
+    self.frm[trackBarName].SelEnd = calc
+    self.frm[valueLabelName].Caption = calc
+
+    self.frm[trackBarName].OnChange = onchange_func
+
 end
 
 function thisFormManager:fill_form(addrs, playerid)
@@ -2000,15 +2377,31 @@ function thisFormManager:fill_form(addrs, playerid)
     self.logger:info("Update trackbars")
     local trackbars = {
         'AttackTrackBar',
-        -- 'DefendingTrackBar',
-        -- 'SkillTrackBar',
-        -- 'GoalkeeperTrackBar',
-        -- 'PowerTrackBar',
-        -- 'MovementTrackBar',
-        -- 'MentalityTrackBar',
+        'DefendingTrackBar',
+        'SkillTrackBar',
+        'GoalkeeperTrackBar',
+        'PowerTrackBar',
+        'MovementTrackBar',
+        'MentalityTrackBar',
     }
     for i=1, #trackbars do
         self:update_trackbar(self.frm[trackbars[i]])
+    end
+
+    self.has_unsaved_changes = false
+end
+
+function thisFormManager:apply_changes()
+    self.has_unsaved_changes = false
+end
+
+function thisFormManager:check_if_has_unsaved_changes()
+    if self.has_unsaved_changes then
+        if messageDialog("You have some unsaved changes in player editor\nDo you want to apply them?", mtInformation, mbYes,mbNo) == mrYes then
+            self:apply_changes()
+        else
+            self.has_unsaved_changes = false
+        end
     end
 
 end
@@ -2033,9 +2426,23 @@ function thisFormManager:assign_current_form_events()
     end
 
     self.frm.FindPlayerByID.OnClick = function(sender)
-
+        sender.Text = ''
     end
     self.frm.SearchPlayerByID.OnClick = function(sender)
+        local playerid = tonumber(self.frm.FindPlayerByID.Text)
+        if playerid == nil then return end
+
+        self:check_if_has_unsaved_changes()
+
+        local player_found = self:find_player_by_id(playerid)
+        if player_found then
+            self:find_player_club_team_record(playerid)
+            self.frm.FindPlayerByID.Text = playerid
+            self:recalculate_ovr()
+            self:onShow()
+        else 
+            self.logger:error(string.format("Not found any player with ID: %d.", playerid))
+        end
     end
     self.frm.PlayerEditorSettings.OnClick = function(sender)
         SettingsForm.show()
@@ -2043,11 +2450,54 @@ function thisFormManager:assign_current_form_events()
 
     self.frm.SyncImage.OnClick = function(sender)
         if not self.current_addrs["players"] then return end
+        self:check_if_has_unsaved_changes()
 
-        local addr = readPointer("pPlayersTableCurrentRecord")
-        if self.current_addrs["players"] == addr then return end
+        --local addr = readPointer("pPlayersTableCurrentRecord")
+        --if self.current_addrs["players"] == addr then return end
 
         self:onShow()
+    end
+
+    self.frm.RandomAttackAttr.OnClick = function(sender)
+        self:roll_random_attributes({
+            "CrossingEdit", "FinishingEdit", "HeadingAccuracyEdit",
+            "ShortPassingEdit", "VolleysEdit"
+        })
+    end
+    self.frm.RandomDefendingAttr.OnClick = function(sender)
+        self:roll_random_attributes({
+            "MarkingEdit", "StandingTackleEdit", "SlidingTackleEdit",
+        })
+    end
+    self.frm.RandomSkillAttr.OnClick = function(sender)
+        self:roll_random_attributes({
+            "DribblingEdit", "CurveEdit", "FreeKickAccuracyEdit",
+            "LongPassingEdit", "BallControlEdit",
+        })
+    end
+    self.frm.RandomGKAttr.OnClick = function(sender)
+        self:roll_random_attributes({
+            "GKDivingEdit", "GKHandlingEdit", "GKKickingEdit",
+            "GKPositioningEdit", "GKReflexEdit",
+        })
+    end
+    self.frm.RandomPowerAttr.OnClick = function(sender)
+        self:roll_random_attributes({
+            "ShotPowerEdit", "JumpingEdit", "StaminaEdit",
+            "StrengthEdit", "LongShotsEdit",
+        })
+    end
+    self.frm.RandomMovementAttr.OnClick = function(sender)
+        self:roll_random_attributes({
+            "AccelerationEdit", "SprintSpeedEdit", "AgilityEdit",
+            "ReactionsEdit", "BalanceEdit",
+        })
+    end
+    self.frm.RandomMentalityAttr.OnClick = function(sender)
+        self:roll_random_attributes({
+            "AggressionEdit", "ComposureEdit", "InterceptionsEdit",
+            "AttackPositioningEdit", "VisionEdit", "PenaltiesEdit",
+        })
     end
     
     self.frm.PlayerInfoTab.OnClick = fnTabClick

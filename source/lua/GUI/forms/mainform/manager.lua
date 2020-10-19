@@ -94,8 +94,8 @@ function thisFormManager:assign_current_form_events()
     end
 
     self.frm.PlayersEditorBtn.OnClick = function(sender)
-        --PlayersEditorForm.show()
-        ShowMessage("Players Editor is not ready yet.\nWill be updated in one of the next updates.\nCheck Patreon/Discord to not miss it.")
+        PlayersEditorForm.show()
+        -- ShowMessage("Players Editor is not ready yet.\nWill be updated in one of the next updates.\nCheck Patreon/Discord to not miss it.")
     end
 
     self.frm.PlayersEditorBtn.OnMouseEnter = function(sender)
