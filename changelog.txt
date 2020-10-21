@@ -65,3 +65,42 @@ v21.1.0.4:
     - Added "Players Development"
         - "Bonus Exp"
         - "Exp Multiplier"
+        
+v21.1.0.5:
+    - Now, all scripts will be deactivate when you close the Cheat Engine.
+    - Fixed in "Players Development"
+        - Players will never receive negative exp.
+    - Added "Job Offers"
+        - Club Team
+        - National Team
+    - Added to "Play As Player"
+        - Create Transfer Offer
+    - Added to "Youth Academy"
+        - "Generate new report"
+        - "Generate players with custom ID"
+        - "Allow multiple scouts in same country"
+        - "15 Players per report"
+        - "Reveal ovr and pot"
+        - "Min age for promotion = 0"
+        - "Custom Attribute Range"
+        - "Custom Age Range"
+        - "Custom Potential"
+        - "100% chance for 5* weak foot"
+        - "100% chance for 5* skill moves"
+    - Added scripts to "users scripts" folder:
+        - "1ovr_99pot.lua"
+        - "99ovr_99pot.lua"
+        - "99ovr_99pot_in_given_team.lua"
+        - "custom_headasset_to_manager.lua"
+        - "custom_headasset_to_playerids.lua"
+        - "custom_tattoos_to_playerids.lua"
+        - "isretiring=0.lua"
+        - "isretiring=1.lua"
+        - "mass_edit_age.lua"
+        - "medium_socklenghtcode.lua"
+        - "modifier=0.lua"
+        - "randomize.lua"
+        - "randomize_shoe_models.lua"
+        - "untuck_shirts.lua"
+    - Added "Manager"
+        - "Make ManagerID editable"
