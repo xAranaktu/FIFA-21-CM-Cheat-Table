@@ -104,3 +104,19 @@ v21.1.0.5:
         - "untuck_shirts.lua"
     - Added "Manager"
         - "Make ManagerID editable"
+
+v21.1.0.6:
+    - Fixed:
+        - Removing traits from players via Players Editor
+    - Added "Club Finances"
+        - Transfer Budget
+    - Added "Transfer Hub"
+        - Change Release Clause value to 1
+        - Allow Transfer approach
+        - Allow Loan approach
+    -  Added to "Players Development"
+        - Boost only specific players
+    - Added scripts to "users scripts" folder:
+        - "99pot.lua"
+        - "99pot_in_given_team.lua"
+        - "fix_players_headmodels.lua"
