@@ -203,6 +203,7 @@ function TableManager:setup_forms()
     end
 
     playersEditorFormManager.game_db_manager = self.game_db_manager
+    playersEditorFormManager.memory_manager = self.memory_manager
 
     for k, v in pairs(forms_map) do
         self.form_managers[k] = v.mgr
@@ -426,21 +427,30 @@ function TableManager:init_ptrs()
     self.logger:debug(string.format("MoraleBasePtr %X", base_ptr2))
     writeQword("basePtrTeamFormMoraleRLC", base_ptr2)
 
-    local form_ptr = self.memory_manager:read_multilevel_pointer(
-        readPointer("basePtrTeamFormMoraleRLC"),
-        {0x0, 0x518, 0x0, 0x20, 0x130, 0x140}
-    ) -- +28 - n on players
-
-    local morale_ptr = self.memory_manager:read_multilevel_pointer(
-        readPointer("basePtrTeamFormMoraleRLC"),
-        {0x0, 0x518, 0x0, 0x20, 0x168}
-    ) -- +4A0 - teamid
-    -- Start list = teamid + 10
-    -- end list = teamid + 18
+    if base_ptr2 then
+        local form_ptr = self.memory_manager:read_multilevel_pointer(
+            readPointer("basePtrTeamFormMoraleRLC"),
+            {0x0, 0x518, 0x0, 0x20, 0x130, 0x140}
+        ) -- +28 - n on players
     
+        local morale_ptr = self.memory_manager:read_multilevel_pointer(
+            readPointer("basePtrTeamFormMoraleRLC"),
+            {0x0, 0x518, 0x0, 0x20, 0x168}
+        ) -- +4A0 - teamid
+        -- Start list = teamid + 10
+        -- end list = teamid + 18
 
-    self.logger:debug(string.format("form_ptr %X", form_ptr))
-    self.logger:debug(string.format("morale_ptr %X", morale_ptr))
+        local pgs_ptr = self.memory_manager:read_multilevel_pointer(
+            readPointer("basePtrTeamFormMoraleRLC"),
+            {0x0, 0x518, 0x0, 0x20, 0xb0}
+        )
+        -- Start list = 0x5b0
+        -- end list = 0x5b8
+
+        self.logger:debug(string.format("form_ptr %X", form_ptr or 0))
+        self.logger:debug(string.format("morale_ptr %X", morale_ptr or 0))
+        self.logger:debug(string.format("pgs_ptr %X", pgs_ptr or 0))
+    end
 end
 
 function TableManager:autoactivate_scripts()
@@ -500,7 +510,7 @@ function TableManager:save_cfg(cfg)
 end
 
 function TableManager:save_offsets(offsets)
-    if not offsets.offsets then
+    if not offsets or not offsets.offsets then
         offsets = {
             offsets = offsets
         }
@@ -512,6 +522,23 @@ function TableManager:save_offsets(offsets)
 
     LIP.save(self.dirs["OFFSETS_FILE"], offsets);
 end
+
+function TableManager:update_offsets()
+    for k,v in pairs(AOB_PATTERNS) do
+        if type(v) == 'string' then
+            -- main FIFA module
+            self.memory_manager:update_offset(k, true)
+        else
+            -- DLC Module
+            local module_name = v['MODULE_NAME']
+            local module_size = getModuleSize(module_name)
+            for kk, vv in pairs(v['AOBS']) do
+                self.memory_manager:update_offset(kk, true, module_name, module_size, k)
+            end
+        end
+    end
+end
+
 
 function TableManager:load_offsets()
     if self:file_exists(self.dirs["OFFSETS_FILE"]) then
@@ -610,6 +637,8 @@ function TableManager:on_attach_to_process()
     end
     self:log_screen_id()
 
+    -- Generate offsets.ini with all offsets.
+    -- self:update_offsets()
     self:save_cfg()
     self:autoactivate_scripts()
     self:init_ptrs()

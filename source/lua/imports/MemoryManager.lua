@@ -71,7 +71,7 @@ end
 
 function MemoryManager:AOBScanModule(aob, module_name, module_size)
     if aob == nil then
-        local critical_error = "Update not properly installed. Remove all versions of the live editor tool you have and download the latest one again"
+        local critical_error = "Update not properly installed. Remove all versions of the cheat table you have and download the latest one again"
         self.logger:critical(critical_error)
         assert(false, critical_error)
     end

@@ -12,7 +12,7 @@
   <CheatEntries>
     <CheatEntry>
       <ID>0</ID>
-      <Description>"v21.1.0.3"</Description>
+      <Description>"v21.1.0.4"</Description>
       <LastState Value="" RealAddress="00000000"/>
       <Color>804000</Color>
       <GroupHeader>1</GroupHeader>
@@ -7448,8 +7448,14 @@ dealloc(newmem_alttab)
                     <CheatEntry>
                       <ID>41</ID>
                       <Description>"hasseasonaljersey"</Description>
-                      <DropDownList ReadOnly="1" DescriptionOnly="1" DisplayValueAsItem="1">0: 'No'
-1: 'Yes'
+                      <DropDownList ReadOnly="1" DescriptionOnly="1" DisplayValueAsItem="1">0: '0'
+1: '1'
+2: '2'
+3: '3'
+4: '4'
+5: '5'
+6: '6'
+7: '7'
 </DropDownList>
                       <VariableType>Binary</VariableType>
                       <BitStart>1</BitStart>
@@ -10661,6 +10667,153 @@ dealloc(newmem_alttab)
                   </Offsets>
                 </CheatEntry>
               </CheatEntries>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>4516</ID>
+          <Description>"Players Development"</Description>
+          <Options moHideChildren="1"/>
+          <LastState/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{
+AUTHOR: Aranaktu
+
+GAME VERSION: Script should always work with newest version of the game which can be downloaded from Origin.
+
+RISK LEVEL: 0/5 (There is no chance that this script will harm your cm save.)
+
+DESCRIPTION:
+This script can manipulate the xp points received by your players.
+Players receive exp after each match and once per week, between Saturday and Sunday (from developement plans).
+There might be also other factors which can add exp.
+
+
+Xp needed for each "level" can be found in "XpLevelRequirements.csv"
+
+HOW TO USE:
+1. Activate the script
+2. Change multiplier and/or bonus xp
+
+VIDEO TUTORIAL(S):
+- NONE
+}
+
+[ENABLE]
+//code from here to '[DISABLE]' will be used to enable the cheat
+{$lua}
+if syntaxcheck then return end
+onScriptActivate()
+
+INJECT_PGMApplyXp = gCTManager.memory_manager:get_validated_address('PGMApplyXp')
+ORG_PGMApplyXp = readBytes(INJECT_PGMApplyXp, 12, true)
+
+{$asm}
+
+alloc(newmem_PGMApplyXp, $500, $INJECT_PGMApplyXp)
+
+label(code_PGMApplyXp)
+label(imul_xp)
+label(add_xp)
+label(ret_PGMApplyXp)
+
+// Training result multiplier
+alloc(fTrainingMultiplier, 8, $INJECT_PGMApplyXp)
+registersymbol(fTrainingMultiplier)
+fTrainingMultiplier:
+db 0
+
+// Bonus Exp
+alloc(intBonusXP, 4, $INJECT_PGMApplyXp)
+registersymbol(intBonusXP)
+intBonusXP:
+db 0
+
+
+newmem_PGMApplyXp:
+  pushf
+  xor rcx, rcx
+  mov ecx, [fTrainingMultiplier]
+  cmp ecx, 0
+  je add_xp
+
+imul_xp:
+  mulss xmm1, dword ptr [fTrainingMultiplier]
+
+add_xp:
+  cvttss2si eax,xmm1
+  mov ecx, [intBonusXP]
+  cmp ecx, 0
+  je code_PGMApplyXp
+  add eax, ecx
+code_PGMApplyXp:
+  popf
+  mov rcx,[rbp+000000A0]
+  jmp ret_PGMApplyXp
+
+$INJECT_PGMApplyXp:
+  jmp newmem_PGMApplyXp
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+ret_PGMApplyXp:
+
+[DISABLE]
+//code_PGMApplyXp from here till the end of the code_PGMApplyXp will be used to disable the cheat
+{$lua}
+writeBytes(INJECT_PGMApplyXp, ORG_PGMApplyXp)
+{$asm}
+
+unregistersymbol(intBonusXP)
+dealloc(intBonusXP)
+unregistersymbol(fTrainingMultiplier)
+dealloc(fTrainingMultiplier)
+dealloc(newmem_PGMApplyXp)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "FIFA21.exe"+5434DF1
+
+"FIFA21.exe"+5434DCD: F3 0F 59 FE                 -  mulss xmm7,xmm6
+"FIFA21.exe"+5434DD1: F3 0F 59 C7                 -  mulss xmm0,xmm7
+"FIFA21.exe"+5434DD5: 44 0F B6 5D 60              -  movzx r11d,byte ptr [rbp+60]
+"FIFA21.exe"+5434DDA: 45 84 DB                    -  test r11l,r11l
+"FIFA21.exe"+5434DDD: 74 0A                       -  je FIFA21.exe+5434DE9
+"FIFA21.exe"+5434DDF: 41 0F 28 CC                 -  movaps xmm1,xmm12
+"FIFA21.exe"+5434DE3: F3 0F 5F C8                 -  maxss xmm1,xmm0
+"FIFA21.exe"+5434DE7: EB 08                       -  jmp FIFA21.exe+5434DF1
+"FIFA21.exe"+5434DE9: 0F 28 C8                    -  movaps xmm1,xmm0
+"FIFA21.exe"+5434DEC: F3 41 0F 5D CC              -  minss xmm1,xmm12
+// ---------- INJECTING HERE ----------
+"FIFA21.exe"+5434DF1: F3 0F 2C C1                 -  cvttss2si eax,xmm1
+"FIFA21.exe"+5434DF5: 48 8B 8D A0 00 00 00        -  mov rcx,[rbp+000000A0]
+// ---------- DONE INJECTING  ----------
+"FIFA21.exe"+5434DFC: 41 01 44 0E 04              -  add [r14+rcx+04],eax
+"FIFA21.exe"+5434E01: 0F B6 BD 98 00 00 00        -  movzx edi,byte ptr [rbp+00000098]
+"FIFA21.exe"+5434E08: 4C 8B 95 80 00 00 00        -  mov r10,[rbp+00000080]
+"FIFA21.exe"+5434E0F: EB 07                       -  jmp FIFA21.exe+5434E18
+"FIFA21.exe"+5434E11: 48 8B 8D A0 00 00 00        -  mov rcx,[rbp+000000A0]
+"FIFA21.exe"+5434E18: FF C3                       -  inc ebx
+"FIFA21.exe"+5434E1A: 49 FF C5                    -  inc r13
+"FIFA21.exe"+5434E1D: 49 FF C4                    -  inc r12
+"FIFA21.exe"+5434E20: 49 83 C6 04                 -  add r14,04
+"FIFA21.exe"+5434E24: 83 FB 22                    -  cmp ebx,22
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>4517</ID>
+              <Description>"Bonus Exp"</Description>
+              <VariableType>4 Bytes</VariableType>
+              <Address>intBonusXP</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>4518</ID>
+              <Description>"Exp Multiplier"</Description>
+              <VariableType>Float</VariableType>
+              <Address>fTrainingMultiplier</Address>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -16048,106 +16201,6 @@ dealloc(newmem_ReleasePlayerFee)
       </CheatEntries>
     </CheatEntry>
     <CheatEntry>
-      <ID>211</ID>
-      <Description>"Temporary Scripts"</Description>
-      <LastState Value="" RealAddress="00000000"/>
-      <GroupHeader>1</GroupHeader>
-      <CheatEntries>
-        <CheatEntry>
-          <ID>210</ID>
-          <Description>"Disable Player Growth Manager"</Description>
-          <LastState/>
-          <VariableType>Auto Assembler Script</VariableType>
-          <AssemblerScript>{
-AUTHOR: Aranaktu
-
-GAME VERSION: Script should always work with newest version of the game which can be downloaded from Origin.
-
-RISK LEVEL: UNKNOWN
-
-DESCRIPTION:
-Temporary Script disabling new Player Growth Manager/System. Without this your changes to player attributes will be reverted.
-Don't know what is the risk of using it.
-
-HOW TO USE:
-Activate the script before you load career mode
-
-VIDEO TUTORIAL(S):
-- NONE
-}
-
-[ENABLE]
-//code from here to '[DISABLE]' will be used to enable the cheat
-{$lua}
-if syntaxcheck then return end
-onScriptActivate()
-
-INJECT_disable_pgm = gCTManager.memory_manager:get_validated_address('DisablePGM')
-ORG_disable_pgm = readBytes(INJECT_disable_pgm, 12, true)
-
-{$asm}
-
-alloc(newmem_disable_pgm, $500, $INJECT_disable_pgm)
-
-label(code_disable_pgm)
-label(ret_disable_pgm)
-
-newmem_disable_pgm:
-  xor eax, eax
-code_disable_pgm:
-  test eax,eax
-  setne byte ptr [rbp+00000560]
-  jmp ret_disable_pgm
-
-$INJECT_disable_pgm:
-  jmp newmem_disable_pgm
-  nop
-  nop
-  nop
-  nop
-ret_disable_pgm:
-
-[DISABLE]
-//code_disable_pgm from here till the end of the code_disable_pgm will be used to disable the cheat
-{$lua}
-writeBytes(INJECT_disable_pgm, ORG_disable_pgm)
-{$asm}
-
-dealloc(newmem_disable_pgm)
-
-{
-// ORIGINAL CODE - INJECTION POINT: "FIFA21.exe"+5429432
-
-"FIFA21.exe"+5429405: 48 8D 8D 60 05 00 00        -  lea rcx,[rbp+00000560]
-"FIFA21.exe"+542940C: E8 AF E3 D9 FF              -  call FIFA21.exe+51C77C0
-"FIFA21.exe"+5429411: 90                          -  nop
-"FIFA21.exe"+5429412: 4C 8D 7B 10                 -  lea r15,[rbx+10]
-"FIFA21.exe"+5429416: 4C 89 7D 00                 -  mov [rbp+00],r15
-"FIFA21.exe"+542941A: 41 BE 01 00 00 00           -  mov r14d,00000001
-"FIFA21.exe"+5429420: 45 8B C6                    -  mov r8d,r14d
-"FIFA21.exe"+5429423: 48 8D 15 EE EF CD 01        -  lea rdx,[FIFA21.exe+7108418]
-"FIFA21.exe"+542942A: 49 8B CC                    -  mov rcx,r12
-"FIFA21.exe"+542942D: E8 0E A0 B7 FD              -  call FIFA21.exe+2FA3440
-// ---------- INJECTING HERE ----------
-"FIFA21.exe"+5429432: 85 C0                       -  test eax,eax
-"FIFA21.exe"+5429434: 0F 95 85 60 05 00 00        -  setne byte ptr [rbp+00000560]
-// ---------- DONE INJECTING  ----------
-"FIFA21.exe"+542943B: 32 DB                       -  xor bl,bl
-"FIFA21.exe"+542943D: 41 8B F6                    -  mov esi,r14d
-"FIFA21.exe"+5429440: 45 33 ED                    -  xor r13d,r13d
-"FIFA21.exe"+5429443: 44 8B C6                    -  mov r8d,esi
-"FIFA21.exe"+5429446: 48 8D 15 A3 EF CD 01        -  lea rdx,[FIFA21.exe+71083F0]
-"FIFA21.exe"+542944D: 48 8D 8D B0 09 00 00        -  lea rcx,[rbp+000009B0]
-"FIFA21.exe"+5429454: E8 97 2A F8 FA              -  call FIFA21.exe+3ABEF0
-"FIFA21.exe"+5429459: B8 FF FF FF FF              -  mov eax,FFFFFFFF
-"FIFA21.exe"+542945E: F0 0F C1 05 AE 29 AA 03     - lock  xadd [FIFA21.exe+8ECBE14],eax
-"FIFA21.exe"+5429466: FF C8                       -  dec eax
-}
-</AssemblerScript>
-        </CheatEntry>
-      </CheatEntries>
-    </CheatEntry>
-    <CheatEntry>
       <ID>10</ID>
       <Description>"------------------------"</Description>
       <LastState Value="" RealAddress="00000000"/>
@@ -16157,7 +16210,7 @@ dealloc(newmem_disable_pgm)
   <UserdefinedSymbols>
     <SymbolEntry>
       <Name>basePtrTeamFormMoraleRLC</Name>
-      <Address>13FFE0000</Address>
+      <Address>13FFF0000</Address>
     </SymbolEntry>
     <SymbolEntry>
       <Name>arrNeverTiredPlayerIDs</Name>
@@ -16168,7 +16221,7 @@ dealloc(newmem_disable_pgm)
 -- Follow these steps to avoid problems:
 -- Allow Cheat Engine to execute this code, otherwise CT will not work.
 -- Don't open FIFA21.exe process by yourself. Cheat Table will do it for you.
--- Make sure you have unzipped everything from the .zip archive. lua folder must be in the same directory where Live Editor.CETRAINER is.
+-- Make sure you have unzipped everything from the .zip archive. lua folder must be in the same directory where FIFA21.CETRAINER is.
 
 
 local status, err = pcall(require, "lua/main")

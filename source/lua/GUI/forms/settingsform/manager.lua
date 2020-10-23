@@ -151,6 +151,14 @@ function thisFormManager:onSaveSettingsClick(sender)
         self.frm.GUIOpacityEdit.Text = opacity
     end
 
+    local scripts_ids = {18}  -- Always expand 'Scripts'
+    for i=0, self.frm.CTTreeview.Items.Count-1 do
+        local is_selected = self.frm.CTTreeview.Items[i].MultiSelected
+        if is_selected then
+            table.insert(scripts_ids, self.frm.CTTreeview.Items[i].Data)
+        end
+    end
+
     for i = 1, #FORMS do
         local form = FORMS[i]
 
@@ -158,8 +166,18 @@ function thisFormManager:onSaveSettingsClick(sender)
         form.AlphaBlend = true
         form.AlphaBlendValue = opacity
     end
+    self.new_cfg.auto_activate = scripts_ids
+
+    self.new_cfg.flags.hide_ce_scanner = self.frm.HideCEMemScannerCB.State == 1
+
+    self.new_cfg.flags.check_for_update = self.frm.SettingsCheckForUpdateCB.State == 1
+    self.new_cfg.flags.only_check_for_free_update = self.frm.SettingsCheckForFreeUpdateCB.State == 1
+
+    self.new_cfg.flags.cache_players_data = self.frm.CachePlayersDataCB.State == 1
+    self.new_cfg.flags.hide_players_potential = self.frm.HidePlayerPotCB.State == 1
 
     self:save_cfg()
+    showMessage('Settings has been saved.')
 end
 
 function thisFormManager:assign_current_form_events()

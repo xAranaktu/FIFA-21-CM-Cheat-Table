@@ -19,6 +19,7 @@ function thisFormManager:new(o)
     self.name = ""
 
     self.game_db_manager = nil
+    self.memory_manager = nil
 
     self.addr_list = nil
     self.fnSaveCfg = nil
@@ -30,6 +31,8 @@ function thisFormManager:new(o)
     self.form_components_description = nil
     self.current_addrs = {}
     self.tab_panel_map = {}
+
+    self.change_list = {}
 
     return o;
 end
@@ -172,6 +175,7 @@ function thisFormManager:recalculate_ovr(update_ovr_edit)
     if update_ovr_edit then
         self.frm.OverallEdit.Text = calculated_ovrs[string.format("%d", preferred_position_id)] + tonumber(self.frm.ModifierEdit.Text)
     end
+    self.change_list["OverallEdit"] = self.frm.OverallEdit.Text
 
     for k,v in pairs(unique_ovrs) do
         table.insert(top_ovrs, k)
@@ -247,14 +251,274 @@ function thisFormManager:roll_random_attributes(components)
         self.frm[components[i]].OnChange = nil
         self.frm[components[i]].Text = math.random(ATTRIBUTE_BOUNDS['min'], ATTRIBUTE_BOUNDS['max'])
         self.frm[components[i]].OnChange = onchange_event
+
+        self.change_list[components[i]] = self.frm[components[i]].Text 
     end
     self:update_trackbar(self.frm[components[1]])
     self:recalculate_ovr(true)
+    
+end
+
+function thisFormManager:update_cached_field(playerid, field_name, new_value)
+    self.logger:info(string.format(
+        "update_cached_field (%s) for playerid: %d. new_val = %d", 
+        field_name, playerid, new_value
+    ))
+    local pgs_ptr = self.memory_manager:read_multilevel_pointer(
+        readPointer("basePtrTeamFormMoraleRLC"),
+        {0x0, 0x518, 0x0, 0x20, 0xb0}
+    )
+    -- Start list = 0x5b0
+    -- end list = 0x5b8
+
+    
+    if not pgs_ptr then
+        self.logger:info("No PlayerGrowthSystem pointer")
+        return
+    end
+    local _start = readPointer(pgs_ptr + 0x5b0)
+    local _end = readPointer(pgs_ptr + 0x5b8)
+    if (not _start) or (not _end) then
+        self.logger:info("No PlayerGrowthSystem start or end")
+        return
+    end
+    local _max = 55
+
+    local current_addr = _start
+    local player_found = false
+    for i=1, _max do
+        -- self.logger:debug(string.format(
+        --     "PlayerGrowthSystem Current - 0x%X, End - 0x%X",
+        --     current_addr, _end
+        -- ))
+        if current_addr >= _end then
+            -- no player to edit
+            return
+        end
+
+        local pid = readInteger(current_addr + PLAYERGROWTHSYSTEM_STRUCT["pid"])
+        if pid == playerid then
+            player_found = true
+            break
+        end
+        
+        current_addr = current_addr + PLAYERGROWTHSYSTEM_STRUCT["size"]
+    end
+
+    if not player_found then return end
+
+    self.logger:info(string.format(
+        "Found PlayerGrowthSystem for: %d at 0x%X",
+        playerid, current_addr
+    ))
+
+    -- Overwrite cached xp in developement plans
+    local field_offset_map = {
+        "acceleration",
+        "sprintspeed",
+        "agility",
+        "balance",
+        "jumping",
+        "stamina",
+        "strength",
+        "reactions",
+        "aggression",
+        "composure",
+        "interceptions",
+        "positioning",
+        "vision",
+        "ballcontrol",
+        "crossing",
+        "dribbling",
+        "finishing",
+        "freekickaccuracy",
+        "headingaccuracy",
+        "longpassing",
+        "shortpassing",
+        "marking",
+        "shotpower",
+        "longshots",
+        "standingtackle",
+        "slidingtackle",
+        "volleys",
+        "curve",
+        "penalties",
+        "gkdiving",
+        "gkhandling",
+        "gkkicking",
+        "gkreflexes",
+        "gkpositioning",
+        "attackingworkrate",
+        "defensiveworkrate",
+        "weakfootabilitytypecode",
+        "skillmoves"
+    }
+
+    local idx = 0
+    for i=1, #field_offset_map do
+        if field_name == field_offset_map[i] then
+            idx = i
+            break
+        end
+    end
+
+    if idx <= 0 then return end
+    self.logger:debug(string.format("update_cached_field: %s", field_name))
+
+    if new_value < 1 then
+        new_value = 1
+    else
+        if field_name == "attackingworkrate" or field_name == "defensiveworkrate" then
+            if new_value > 3 then
+                new_value = 3
+            end
+        elseif field_name == "weakfootabilitytypecode" or field_name == "skillmoves" then
+            if new_value > 5 then
+                new_value = 5
+            end
+        end
+    end
+
+    local xp_points_to_apply = 1000
+    if field_name == "attackingworkrate" or field_name == "defensiveworkrate" then
+        local xp_to_wr = {
+            5000,    -- medium
+            100,    -- low
+            10000   -- high
+        }
+        xp_points_to_apply = xp_to_wr[new_value]
+    elseif field_name == "weakfootabilitytypecode" or field_name == "skillmoves" then
+        local xp_to_star = {
+            100,
+            2500,
+            5000,
+            7500,
+            10000
+        }
+        xp_points_to_apply = xp_to_star[new_value]
+    else
+        -- Add xp at: 14524d50c
+
+        -- Add xp at: 145434DFC
+        -- Xp points needed for attribute
+        local xp_to_attribute = {
+            1000,
+            2101,
+            3202,
+            4305,
+            5410,
+            6518,
+            7628,
+            8742,
+            9860,
+            10983,
+            12110,
+            13243,
+            14382,
+            15528,
+            16680,
+            17840,
+            19008,
+            20185,
+            21370,
+            22565,
+            23770,
+            24986,
+            26212,
+            27450,
+            28700,
+            29963,
+            31238,
+            32527,
+            33830,
+            35148,
+            36480,
+            37828,
+            39192,
+            40573,
+            41970,
+            43385,
+            44818,
+            46270,
+            47740,
+            49230,
+            50740,
+            52271,
+            53822,
+            55395,
+            56990,
+            58608,
+            60248,
+            61912,
+            63600,
+            65313,
+            67050,
+            68813,
+            70602,
+            72418,
+            74260,
+            76130,
+            78028,
+            79955,
+            81910,
+            83895,
+            85910,
+            87956,
+            90032,
+            92140,
+            94280,
+            96453,
+            98658,
+            100897,
+            103170,
+            105478,
+            107820,
+            110198,
+            112612,
+            115063,
+            117550,
+            120075,
+            122638,
+            125240,
+            127880,
+            130560,
+            133280,
+            136041,
+            138842,
+            141685,
+            144570,
+            147498,
+            150468,
+            153482,
+            156540,
+            159643,
+            162790,
+            165983,
+            169222,
+            172508,
+            175840,
+            179220,
+            182648,
+            186125,
+            189650
+        }
+        xp_points_to_apply = xp_to_attribute[new_value]
+    end
+
+    local write_to = current_addr+(4*idx)
+    self.logger:debug(string.format(
+        "XP: %d write to: 0x%X",
+        xp_points_to_apply, write_to
+    ))
+
+    writeInteger(write_to, xp_points_to_apply)
 end
 
 function thisFormManager:get_components_description()
     local fnCommonOnChange = function(sender)
+        -- self.logger:debug(string.format("thisFormManager: %s", sender.Name))
         self.has_unsaved_changes = true
+        self.change_list[sender.Name] = sender.Text or sender.ItemIndex
     end
 
     local fnOnChangeAttribute = function(sender)
@@ -274,17 +538,19 @@ function thisFormManager:get_components_description()
 
         self:update_trackbar(sender)
         self:recalculate_ovr(true)
+
+        self.change_list[sender.Name] = sender.Text
     end
 
     local fnOnChangeTrait = function(sender)
         self.has_unsaved_changes = true
+        self.change_list[sender.Name] = sender.State
     end
 
     local fnCommonDBValGetter = function(addrs, table_name, field_name, raw)
         local addr = addrs[table_name]
         return self.game_db_manager:get_table_record_field_value(addr, table_name, field_name, raw)
     end
-
 
     local AttributesTrackBarOnChange = function(sender)
         local comp_desc = self.form_components_description[sender.Name]
@@ -307,6 +573,8 @@ function thisFormManager:get_components_description()
                 self.frm[comp_desc['depends_on'][i]].OnChange = nil
                 -- update value
                 self.frm[comp_desc['depends_on'][i]].Text = new_attr_val
+                self.change_list[comp_desc['depends_on'][i]] = new_attr_val
+
                 -- restore onchange event
                 self.frm[comp_desc['depends_on'][i]].OnChange = onchange_event
             end
@@ -330,6 +598,28 @@ function thisFormManager:get_components_description()
         return is_set
     end
 
+    local fnSaveTrait = function(addrs, comp_name, comp_desc)
+        local component = self.frm[comp_name]
+        local field_name = comp_desc["db_field"]["field_name"]
+        local table_name = comp_desc["db_field"]["table_name"]
+
+        local addr = addrs[table_name]
+        
+
+        local traitbitfield = self.game_db_manager:get_table_record_field_value(addr, table_name, field_name)
+        local is_set = component.State
+
+        if is_set then
+            traitbitfield = bOr(traitbitfield, bShl(1, comp_desc["trait_bit"]))
+            --self.logger:debug(string.format("v is set: %d", v))
+        else
+            traitbitfield = bAnd(traitbitfield, bNot(bShl(1, comp_desc["trait_bit"])))
+            --self.logger:debug(string.format("v not: %d", v))
+        end
+
+        self.game_db_manager:set_table_record_field_value(addr, table_name, field_name, traitbitfield)
+    end
+
     local fnDBValDaysToDate = function(addrs, table_name, field_name, raw)
         local addr = addrs[table_name]
         local days = self.game_db_manager:get_table_record_field_value(addr, table_name, field_name, raw)
@@ -339,6 +629,103 @@ function thisFormManager:get_components_description()
             date["day"], date["month"], date["year"]
         )
         return result
+    end
+
+    local fnSaveCommonCB = function(addrs, comp_name, comp_desc)
+        local component = self.frm[comp_name]
+        local cb_rec_id = comp_desc["cb_id"]
+        local new_value = 0
+        if cb_rec_id then
+            local dropdown = getAddressList().getMemoryRecordByID(cb_rec_id)
+            local dropdown_items = dropdown.DropDownList
+            local dropdown_selected_value = dropdown.Value
+        
+            for j = 0, dropdown_items.Count-1 do
+                local val, desc = string.match(dropdown_items[j], "(%d+): '(.+)'")
+                if component.Items[component.ItemIndex] == desc then
+                    new_value = tonumber(val)
+                    break
+                end
+            end
+        else 
+            new_value = component.ItemIndex
+        end
+
+        local field_name = comp_desc["db_field"]["field_name"]
+        local table_name = comp_desc["db_field"]["table_name"]
+        local raw = comp_desc["db_field"]["raw_val"]
+
+        local addr = addrs[table_name]
+
+        local log_msg = string.format(
+            "%X, %s - %s = %d",
+            addr, table_name, field_name, new_value
+        )
+        self.logger:debug(log_msg)
+        self.game_db_manager:set_table_record_field_value(addr, table_name, field_name, new_value, raw)
+
+        if comp_desc["db_field"]["is_in_dev_plan"] then
+            self:update_cached_field(tonumber(self.frm.PlayerIDEdit.Text), field_name, new_value + 1)
+        end
+        
+    end
+
+    local fnSaveJoinTeamDate = function(addrs, comp_name, comp_desc)
+        local field_name = comp_desc["db_field"]["field_name"]
+        local table_name = comp_desc["db_field"]["table_name"]
+        local addr = addrs[table_name]
+
+        local new_value = 157195 -- 03/03/2013
+        local d, m, y = string.match(self.frm[comp_name].Text, "(%d+)/(%d+)/(%d+)")
+        if (not d) or (not m) or (not y) then
+            self.logger:error(string.format(
+                "Invalid date format in %s component: %s doesn't match DD/MM/YYYY pattern",
+                comp_name, self.frm[comp_name].Text)
+            )
+        else
+            new_value = date_to_days({
+                day=tonumber(d),
+                month=tonumber(m),
+                year=tonumber(y)
+            })
+        end
+
+        self.game_db_manager:set_table_record_field_value(addr, table_name, field_name, new_value, raw)
+    end
+
+    
+
+    local fnSaveCommon = function(addrs, comp_name, comp_desc)
+        if comp_desc["not_editable"] then return end
+
+        local field_name = comp_desc["db_field"]["field_name"]
+        local table_name = comp_desc["db_field"]["table_name"]
+
+        local addr = addrs[table_name]
+
+        local new_value = tonumber(self.frm[comp_name].Text)
+        local log_msg = string.format(
+            "%X, %s - %s = %d",
+            addr, table_name, field_name, new_value
+        )
+        self.logger:debug(log_msg)
+        self.game_db_manager:set_table_record_field_value(addr, table_name, field_name, new_value)
+    end
+
+    local fnSaveAttributeChange = function(addrs, comp_name, comp_desc)
+        local field_name = comp_desc["db_field"]["field_name"]
+        local table_name = comp_desc["db_field"]["table_name"]
+
+        local addr = addrs[table_name]
+
+        local new_value = tonumber(self.frm[comp_name].Text)
+        local log_msg = string.format(
+            "%X, %s - %s = %d",
+            addr, table_name, field_name, new_value
+        )
+        self.logger:debug(log_msg)
+        self.game_db_manager:set_table_record_field_value(addr, table_name, field_name, new_value)
+        self:update_cached_field(tonumber(self.frm.PlayerIDEdit.Text), field_name, new_value)
     end
 
     local fnGetPlayerAge = function(addrs, table_name, field_name, raw)
@@ -394,6 +781,22 @@ function thisFormManager:get_components_description()
         return math.floor(os.difftime(current_date, bdate) / (24*60*60*365.25))
     end
 
+    local fnSavePlayerAge = function(addrs, comp_name, comp_desc)
+        
+        local new_age = tonumber(self.frm[comp_name].Text)
+        local field_name = comp_desc["db_field"]["field_name"]
+        local table_name = comp_desc["db_field"]["table_name"]
+        local current_age = fnGetPlayerAge(addrs, table_name, field_name)
+        local addr = addrs[table_name]
+
+        if new_age == current_age then return end
+        local bdatedays = self.game_db_manager:get_table_record_field_value(addr, table_name, field_name, raw)
+
+        bdatedays = bdatedays + ((current_age - new_age) * 366)
+
+        self.game_db_manager:set_table_record_field_value(addr, table_name, field_name, bdatedays)
+    end
+
     local fnFillCommonCB = function(sender, current_value, cb_rec_id)
         local has_items = sender.Items.Count > 0
 
@@ -431,7 +834,8 @@ function thisFormManager:get_components_description()
             valGetter = fnCommonDBValGetter,
             events = {
                 OnChange = fnCommonOnChange
-            }
+            },
+            not_editable = true
         },
         OverallEdit = {
             db_field = {
@@ -439,6 +843,7 @@ function thisFormManager:get_components_description()
                 field_name = "overallrating"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -449,6 +854,7 @@ function thisFormManager:get_components_description()
                 field_name = "potential"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -459,6 +865,7 @@ function thisFormManager:get_components_description()
                 field_name = "birthdate"
             },
             valGetter = fnGetPlayerAge,
+            OnSaveChanges = fnSavePlayerAge,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -469,6 +876,7 @@ function thisFormManager:get_components_description()
                 field_name = "firstnameid"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -479,6 +887,7 @@ function thisFormManager:get_components_description()
                 field_name = "lastnameid"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -489,6 +898,7 @@ function thisFormManager:get_components_description()
                 field_name = "commonnameid"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -499,6 +909,7 @@ function thisFormManager:get_components_description()
                 field_name = "playerjerseynameid"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -509,6 +920,7 @@ function thisFormManager:get_components_description()
                 field_name = "gksavetype"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -519,6 +931,7 @@ function thisFormManager:get_components_description()
                 field_name = "gkkickstyle"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -529,6 +942,7 @@ function thisFormManager:get_components_description()
                 field_name = "contractvaliduntil"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -539,6 +953,7 @@ function thisFormManager:get_components_description()
                 field_name = "playerjointeamdate"
             },
             valGetter = fnDBValDaysToDate,
+            OnSaveChanges = fnSaveJoinTeamDate,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -549,6 +964,7 @@ function thisFormManager:get_components_description()
                 field_name = "jerseynumber"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -560,6 +976,7 @@ function thisFormManager:get_components_description()
             },
             cb_id = CT_MEMORY_RECORDS["PLAYERS_NATIONALITY"],
             cbFiller = fnFillCommonCB,
+            OnSaveChanges = fnSaveCommonCB,
             valGetter = fnCommonDBValGetter,
             events = {
                 OnChange = fnCommonOnChange
@@ -573,6 +990,7 @@ function thisFormManager:get_components_description()
             cb_id = CT_MEMORY_RECORDS["PLAYERS_PRIMARY_POS"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -586,6 +1004,7 @@ function thisFormManager:get_components_description()
             cb_id = CT_MEMORY_RECORDS["PLAYERS_SECONDARY_POS"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -599,6 +1018,7 @@ function thisFormManager:get_components_description()
             cb_id = CT_MEMORY_RECORDS["PLAYERS_SECONDARY_POS"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -612,6 +1032,7 @@ function thisFormManager:get_components_description()
             cb_id = CT_MEMORY_RECORDS["PLAYERS_SECONDARY_POS"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -625,6 +1046,7 @@ function thisFormManager:get_components_description()
             cb_id = CT_MEMORY_RECORDS["NO_YES_CB"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -638,6 +1060,7 @@ function thisFormManager:get_components_description()
             cb_id = CT_MEMORY_RECORDS["GENDER_CB"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -646,11 +1069,13 @@ function thisFormManager:get_components_description()
             db_field = {
                 table_name = "players",
                 field_name = "attackingworkrate",
-                raw_val = true
+                raw_val = true,
+                is_in_dev_plan = true
             },
             cb_id = CT_MEMORY_RECORDS["WR_CB"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -659,11 +1084,13 @@ function thisFormManager:get_components_description()
             db_field = {
                 table_name = "players",
                 field_name = "defensiveworkrate",
-                raw_val = true
+                raw_val = true,
+                is_in_dev_plan = true
             },
             cb_id = CT_MEMORY_RECORDS["WR_CB"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -672,11 +1099,13 @@ function thisFormManager:get_components_description()
             db_field = {
                 table_name = "players",
                 field_name = "skillmoves",
-                raw_val = true
+                raw_val = true,
+                is_in_dev_plan = true
             },
             cb_id = CT_MEMORY_RECORDS["FIVE_STARS_CB"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -685,11 +1114,13 @@ function thisFormManager:get_components_description()
             db_field = {
                 table_name = "players",
                 field_name = "weakfootabilitytypecode",
-                raw_val = true
+                raw_val = true,
+                is_in_dev_plan = true
             },
             cb_id = CT_MEMORY_RECORDS["FIVE_STARS_CB"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -703,6 +1134,7 @@ function thisFormManager:get_components_description()
             cb_id = CT_MEMORY_RECORDS["FIVE_STARS_CB"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -716,6 +1148,7 @@ function thisFormManager:get_components_description()
             cb_id = CT_MEMORY_RECORDS["PREFERREDFOOT_CB"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -743,6 +1176,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Attack',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -754,6 +1188,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Attack',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -765,6 +1200,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Attack',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -776,6 +1212,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Attack',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -787,6 +1224,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Attack',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -812,6 +1250,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Defending',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -823,6 +1262,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Defending',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -834,6 +1274,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Defending',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -860,6 +1301,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Skill',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -871,6 +1313,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Skill',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -882,6 +1325,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Skill',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -893,6 +1337,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Skill',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -904,6 +1349,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Skill',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -930,6 +1376,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Goalkeeper',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -941,6 +1388,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Goalkeeper',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -952,6 +1400,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Goalkeeper',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -963,6 +1412,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Goalkeeper',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -974,6 +1424,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Goalkeeper',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1000,6 +1451,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Power',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1011,6 +1463,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Power',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1022,6 +1475,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Power',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1033,6 +1487,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Power',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1044,6 +1499,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Power',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1070,6 +1526,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Movement',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1081,6 +1538,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Movement',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1092,6 +1550,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Movement',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1103,6 +1562,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Movement',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1114,6 +1574,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Movement',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1140,6 +1601,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Mentality',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1151,6 +1613,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Mentality',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1162,6 +1625,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Mentality',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1173,6 +1637,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Mentality',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1184,6 +1649,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Mentality',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1195,6 +1661,7 @@ function thisFormManager:get_components_description()
             },
             group = 'Mentality',
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveAttributeChange,
             events = {
                 OnChange = fnOnChangeAttribute
             }
@@ -1207,6 +1674,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 0,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1218,6 +1686,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 1,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1229,6 +1698,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 2,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1240,6 +1710,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 3,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1251,6 +1722,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 6,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1262,6 +1734,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 7,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1273,6 +1746,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 8,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1284,6 +1758,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 9,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1295,6 +1770,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 12,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1306,6 +1782,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 14,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1317,6 +1794,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 15,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1328,6 +1806,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 16,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1339,6 +1818,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 17,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1350,6 +1830,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 18,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1361,6 +1842,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 19,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1372,6 +1854,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 20,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1383,6 +1866,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 21,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1394,6 +1878,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 22,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1405,6 +1890,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 23,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1416,6 +1902,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 24,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1427,6 +1914,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 27,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1438,6 +1926,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 28,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1449,6 +1938,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 29,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1461,6 +1951,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 1,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1472,6 +1963,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 2,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1483,6 +1975,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 4,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1494,6 +1987,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 10,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1505,6 +1999,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 11,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1516,6 +2011,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 13,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1527,6 +2023,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 25,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1538,6 +2035,7 @@ function thisFormManager:get_components_description()
             },
             trait_bit = 26,
             valGetter = fnTraitCheckbox,
+            OnSaveChanges = fnSaveTrait,
             events = {
                 OnChange = fnOnChangeTrait
             }
@@ -1550,6 +2048,7 @@ function thisFormManager:get_components_description()
                 field_name = "height"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1560,6 +2059,7 @@ function thisFormManager:get_components_description()
                 field_name = "weight"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1573,6 +2073,7 @@ function thisFormManager:get_components_description()
             cb_id = CT_MEMORY_RECORDS["BODYTYPE_CB"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1586,6 +2087,7 @@ function thisFormManager:get_components_description()
             cb_id = CT_MEMORY_RECORDS["HEADTYPE_CB"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1599,6 +2101,7 @@ function thisFormManager:get_components_description()
             cb_id = CT_MEMORY_RECORDS["HAIRCOLOR_CB"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1609,6 +2112,7 @@ function thisFormManager:get_components_description()
                 field_name = "hairtypecode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1619,6 +2123,7 @@ function thisFormManager:get_components_description()
                 field_name = "hairstylecode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1629,6 +2134,7 @@ function thisFormManager:get_components_description()
                 field_name = "facialhairtypecode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1639,6 +2145,7 @@ function thisFormManager:get_components_description()
                 field_name = "facialhaircolorcode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1649,6 +2156,7 @@ function thisFormManager:get_components_description()
                 field_name = "sideburnscode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1659,6 +2167,7 @@ function thisFormManager:get_components_description()
                 field_name = "eyebrowcode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1669,6 +2178,7 @@ function thisFormManager:get_components_description()
                 field_name = "eyecolorcode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1679,6 +2189,7 @@ function thisFormManager:get_components_description()
                 field_name = "skintypecode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1692,6 +2203,7 @@ function thisFormManager:get_components_description()
             cb_id = CT_MEMORY_RECORDS["SKINCOLOR_CB"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1702,6 +2214,7 @@ function thisFormManager:get_components_description()
                 field_name = "tattoohead"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1712,6 +2225,7 @@ function thisFormManager:get_components_description()
                 field_name = "tattoofront"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1722,6 +2236,7 @@ function thisFormManager:get_components_description()
                 field_name = "tattooback"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1732,6 +2247,7 @@ function thisFormManager:get_components_description()
                 field_name = "tattoorightarm"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1742,6 +2258,7 @@ function thisFormManager:get_components_description()
                 field_name = "tattooleftarm"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1752,6 +2269,7 @@ function thisFormManager:get_components_description()
                 field_name = "tattoorightleg"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1762,6 +2280,7 @@ function thisFormManager:get_components_description()
                 field_name = "tattooleftleg"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1775,6 +2294,7 @@ function thisFormManager:get_components_description()
             cb_id = CT_MEMORY_RECORDS["NO_YES_CB"],
             cbFiller = fnFillCommonCB,
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommonCB,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1785,6 +2305,7 @@ function thisFormManager:get_components_description()
                 field_name = "headassetid"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1795,6 +2316,7 @@ function thisFormManager:get_components_description()
                 field_name = "headvariation"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1805,6 +2327,7 @@ function thisFormManager:get_components_description()
                 field_name = "headclasscode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1815,6 +2338,7 @@ function thisFormManager:get_components_description()
                 field_name = "jerseystylecode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1825,6 +2349,7 @@ function thisFormManager:get_components_description()
                 field_name = "jerseyfit"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1835,6 +2360,7 @@ function thisFormManager:get_components_description()
                 field_name = "jerseysleevelengthcode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1845,6 +2371,7 @@ function thisFormManager:get_components_description()
                 field_name = "hasseasonaljersey"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1855,6 +2382,7 @@ function thisFormManager:get_components_description()
                 field_name = "shortstyle"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1865,6 +2393,7 @@ function thisFormManager:get_components_description()
                 field_name = "socklengthcode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1876,6 +2405,7 @@ function thisFormManager:get_components_description()
                 field_name = "gkglovetypecode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1886,6 +2416,7 @@ function thisFormManager:get_components_description()
                 field_name = "shoetypecode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1896,6 +2427,7 @@ function thisFormManager:get_components_description()
                 field_name = "shoedesigncode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1906,6 +2438,7 @@ function thisFormManager:get_components_description()
                 field_name = "shoecolorcode1"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1916,6 +2449,7 @@ function thisFormManager:get_components_description()
                 field_name = "shoecolorcode2"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1926,6 +2460,7 @@ function thisFormManager:get_components_description()
                 field_name = "accessorycode1"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1936,6 +2471,7 @@ function thisFormManager:get_components_description()
                 field_name = "accessorycolourcode1"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1946,6 +2482,7 @@ function thisFormManager:get_components_description()
                 field_name = "accessorycode2"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1956,6 +2493,7 @@ function thisFormManager:get_components_description()
                 field_name = "accessorycolourcode2"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1966,6 +2504,7 @@ function thisFormManager:get_components_description()
                 field_name = "accessorycode3"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1976,6 +2515,7 @@ function thisFormManager:get_components_description()
                 field_name = "accessorycolourcode3"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1986,6 +2526,7 @@ function thisFormManager:get_components_description()
                 field_name = "accessorycode4"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -1996,6 +2537,7 @@ function thisFormManager:get_components_description()
                 field_name = "accessorycolourcode4"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2007,6 +2549,7 @@ function thisFormManager:get_components_description()
                 field_name = "runningcode1"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2017,6 +2560,7 @@ function thisFormManager:get_components_description()
                 field_name = "runningcode2"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2027,6 +2571,7 @@ function thisFormManager:get_components_description()
                 field_name = "finishingcode1"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2037,6 +2582,7 @@ function thisFormManager:get_components_description()
                 field_name = "finishingcode2"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2047,6 +2593,7 @@ function thisFormManager:get_components_description()
                 field_name = "animfreekickstartposcode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2057,6 +2604,7 @@ function thisFormManager:get_components_description()
                 field_name = "animpenaltiesstartposcode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2067,6 +2615,7 @@ function thisFormManager:get_components_description()
                 field_name = "animpenaltieskickstylecode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2077,6 +2626,7 @@ function thisFormManager:get_components_description()
                 field_name = "animpenaltiesmotionstylecode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2087,6 +2637,7 @@ function thisFormManager:get_components_description()
                 field_name = "animpenaltiesapproachcode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2097,6 +2648,7 @@ function thisFormManager:get_components_description()
                 field_name = "faceposerpreset"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2107,6 +2659,7 @@ function thisFormManager:get_components_description()
                 field_name = "emotion"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2117,6 +2670,7 @@ function thisFormManager:get_components_description()
                 field_name = "skillmoveslikelihood"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2127,6 +2681,7 @@ function thisFormManager:get_components_description()
                 field_name = "modifier"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2137,6 +2692,7 @@ function thisFormManager:get_components_description()
                 field_name = "iscustomized"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2147,6 +2703,7 @@ function thisFormManager:get_components_description()
                 field_name = "usercaneditname"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
@@ -2157,10 +2714,11 @@ function thisFormManager:get_components_description()
                 field_name = "runstylecode"
             },
             valGetter = fnCommonDBValGetter,
+            OnSaveChanges = fnSaveCommon,
             events = {
                 OnChange = fnCommonOnChange
             }
-        },
+        }
     }
 
     return components_description
@@ -2327,8 +2885,8 @@ function thisFormManager:fill_form(addrs, playerid)
 
         local component_class = component.ClassName
 
+        component.OnChange = nil
         if component_class == 'TCEEdit' then
-            component.OnChange = nil
             if comp_desc["valGetter"] then
                 component.Text = comp_desc["valGetter"](
                     addrs,
@@ -2339,18 +2897,8 @@ function thisFormManager:fill_form(addrs, playerid)
             else
                 component.Text = "TODO SET VALUE!"
             end
-
-            if comp_desc['events'] then
-                for key, value in pairs(comp_desc['events']) do
-                    component[key] = value
-                end
-            end
         elseif component_class == 'TCETrackBar' then
-            if comp_desc['events'] then
-                for key, value in pairs(comp_desc['events']) do
-                    component[key] = value
-                end
-            end
+            --
         elseif component_class == 'TCEComboBox' then
             if comp_desc["valGetter"] and comp_desc["cbFiller"] then
                 local current_field_val = comp_desc["valGetter"](
@@ -2369,6 +2917,11 @@ function thisFormManager:fill_form(addrs, playerid)
             end
         elseif component_class == 'TCECheckBox' then
             component.State = comp_desc["valGetter"](addrs, comp_desc)
+        end
+        if comp_desc['events'] then
+            for key, value in pairs(comp_desc['events']) do
+                component[key] = value
+            end
         end
 
         ::continue::
@@ -2391,19 +2944,57 @@ function thisFormManager:fill_form(addrs, playerid)
     self.has_unsaved_changes = false
 end
 
-function thisFormManager:apply_changes()
+function thisFormManager:onApplyChangesBtnClick()
+    self.logger:info("Apply Changes")
+
+    self.logger:debug("Iterate change_list")
+    for key, value in pairs(self.change_list) do
+        
+        local comp_desc = self.form_components_description[key]
+        local component = self.frm[key]
+        local component_class = component.ClassName
+
+        self.logger:debug(string.format(
+            "Edited comp: %s (%s), val: %s",
+            key, component_class, value
+        ))
+        if component_class == 'TCEEdit' then
+            if comp_desc["OnSaveChanges"] then
+                comp_desc["OnSaveChanges"](
+                    self.current_addrs, key, comp_desc
+                )
+            end
+        elseif component_class == 'TCECheckBox' then
+            if comp_desc["OnSaveChanges"] then
+                comp_desc["OnSaveChanges"](
+                    self.current_addrs, key, comp_desc
+                )
+            end
+        elseif component_class == 'TCEComboBox' then
+            if comp_desc["OnSaveChanges"] then
+                comp_desc["OnSaveChanges"](
+                    self.current_addrs, key, comp_desc
+                )
+            end
+        end
+    end
+
     self.has_unsaved_changes = false
+    self.change_list = {}
+    local msg = string.format("Player with ID %s has been edited", self.frm.PlayerIDEdit.Text)
+    showMessage(msg)
+    self.logger:info(msg)
 end
 
 function thisFormManager:check_if_has_unsaved_changes()
     if self.has_unsaved_changes then
         if messageDialog("You have some unsaved changes in player editor\nDo you want to apply them?", mtInformation, mbYes,mbNo) == mrYes then
-            self:apply_changes()
+            self:onApplyChangesBtnClick()
         else
             self.has_unsaved_changes = false
+            self.change_list = {}
         end
     end
-
 end
 
 function thisFormManager:assign_current_form_events()
@@ -2527,6 +3118,23 @@ function thisFormManager:assign_current_form_events()
     self.frm.PlayerCloneTab.OnClick = fnTabClick
     self.frm.PlayerCloneTab.OnMouseEnter = fnTabMouseEnter
     self.frm.PlayerCloneTab.OnMouseLeave = fnTabMouseLeave
+
+    self.frm.ApplyChangesBtn.OnClick = function(sender)
+        self:onApplyChangesBtnClick()
+    end
+
+    self.frm.ApplyChangesBtn.OnMouseEnter = function(sender)
+        self:onBtnMouseEnter(sender)
+    end
+
+    self.frm.ApplyChangesBtn.OnMouseLeave = function(sender)
+        self:onBtnMouseLeave(sender)
+    end
+
+    self.frm.ApplyChangesBtn.OnPaint = function(sender)
+        self:onPaintButton(sender)
+    end
+
 end
 
 function thisFormManager:setup(params)
@@ -2547,6 +3155,7 @@ function thisFormManager:setup(params)
         PlayerCloneTab = "PlayerClonePanel"
     }
     PlayersEditorForm.FindPlayerByID.Text = 'Find player by ID...'
+    self.change_list = {}
 
     self:assign_current_form_events()
 end

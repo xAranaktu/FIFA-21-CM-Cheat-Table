@@ -144,5 +144,42 @@ function GameDBManager:get_table_record_field_value(record_addr, table_name, fie
     return result
 end
 
+function GameDBManager:set_table_record_field_value(record_addr, table_name, fieldname, new_value, raw)
+    if raw == nil then raw = false end
+    local meta_idx = DB_TABLES_META_MAP[table_name][fieldname]
+    local fld_desc = DB_TABLES_META[table_name][meta_idx]
+
+    local addr = record_addr + fld_desc["offset"]
+    local v = readInteger(addr)
+    --self.logger:debug(string.format("writeval: %d", v))
+    local startbit = fld_desc["startbit"]
+    local depth = fld_desc["depth"]-1
+    --self.logger:debug(string.format("Startbit: %d", startbit))
+    --self.logger:debug(string.format("depth: %d", depth))
+
+    --self.logger:debug(string.format("new_value: %d", new_value))
+    if not raw then
+        new_value = new_value - fld_desc["rangelow"]
+    end
+    for i=0, depth do
+        --self.logger:debug(string.format("i: %d", i))
+        local currentbit = startbit + i
+        --self.logger:debug(string.format("currentbit: %d", currentbit))
+        local is_set = bAnd(bShr(new_value, i), 1)
+        --self.logger:debug(string.format("is_set: %d", is_set))
+
+        if is_set == 1 then
+            v = bOr(v, bShl(1, currentbit))
+            --self.logger:debug(string.format("v is set: %d", v))
+        else
+            v = bAnd(v, bNot(bShl(1, currentbit)))
+            --self.logger:debug(string.format("v not: %d", v))
+        end
+    end
+    --self.logger:debug(string.format("writeval: %d", v))
+
+    writeInteger(addr, v)
+end
+
 
 return GameDBManager;

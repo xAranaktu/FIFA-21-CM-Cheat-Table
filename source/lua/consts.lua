@@ -25,6 +25,7 @@ CT_MEMORY_RECORDS = {
 
 AOB_PATTERNS = {
     DisablePGM = "85 C0 0F 95 85 60 05 00 00",
+    PGMApplyXp = "F3 0F 2C C1 48 8B 8D A0 00 00 00",
 
     ScreenID = '48 8D 35 ?? ?? ?? ?? 48 0F 45 35 ?? ?? ?? ?? 49 8B FF',
     DatabaseRead = '48 ?? ?? 4C 03 46 30 E8',
@@ -49,7 +50,7 @@ AOB_PATTERNS = {
     ReleasePlayerMsgBox = '4C 8B E0 85 FF 0F',
     ReleasePlayerFee = '41 8B D7 49 8B CD 44',
     YouthAcademyAllCountriesAvailable = '8B 0C 90 41 8D 51 20',
-    AltTab = "48 83 ec 48 48 83 3d ?? ?? ?? ?? ?? 74"
+    AltTab = "48 83 EC 48 48 83 3D ?? ?? ?? ?? ?? 74"
 }
 
 DEFAULT_CFG = {
@@ -2171,6 +2172,11 @@ PLAYERMORALE_STRUCT = {
     contract = 0x24,
     morale_val = 0x28,
     playtime = 0x30,
+}
+
+PLAYERGROWTHSYSTEM_STRUCT = {
+    size = 0x9C,
+    pid = 0x0
 }
 
 -- All available forms
