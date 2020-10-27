@@ -120,3 +120,22 @@ v21.1.0.6:
         - "99pot.lua"
         - "99pot_in_given_team.lua"
         - "fix_players_headmodels.lua"
+
+v21.1.0.7:
+    - Fixed:
+        - Updating pointers for records in database tables
+        - Allow transfer approach
+    - Added To GUI -> Players Editor
+        - Miniface image
+        - Club crest image
+        - Morale
+        - Form
+        - Sharpness
+        - Fitness
+        - Injury
+        - Release Clause
+        - Squad Role
+        - Wage
+        - Performance Bonus
+        - Loan Wage Split
+    - Added again "Disable Player Growth manager"
