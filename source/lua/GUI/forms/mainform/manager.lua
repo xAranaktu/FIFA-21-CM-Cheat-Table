@@ -69,6 +69,23 @@ end
 function thisFormManager:assign_current_form_events()
     self:assign_events()
 
+    local org_onCEClose = getMainForm().OnClose
+    getMainForm().OnClose = function(sender)
+        self.logger:info("Deactivating all scripts")
+
+        local addrlist = getAddressList() 
+        for i=0,addrlist.Count-1 do
+            local entry = addrlist[i]
+            if entry.Active then
+                self.logger:debug(string.format("Deactivating: %s", entry.Description))
+                entry.Active = false
+            end
+        end
+        self.logger:info("Deactivated all scripts")
+        org_onCEClose(sender)
+        return caFree 
+    end
+
     self.frm.Exit.OnClick = function(sender)
         self:OnWindowCloseClick(sender)
     end

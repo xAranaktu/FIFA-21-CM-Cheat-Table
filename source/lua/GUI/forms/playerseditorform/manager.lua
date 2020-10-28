@@ -265,7 +265,7 @@ function thisFormManager:update_cached_field(playerid, field_name, new_value)
         field_name, playerid, new_value
     ))
     local pgs_ptr = self.memory_manager:read_multilevel_pointer(
-        readPointer("basePtrTeamFormMoraleRLC"),
+        readPointer("pScriptsBase"),
         {0x0, 0x518, 0x0, 0x20, 0xb0}
     )
     -- Start list = 0x5b0
@@ -765,20 +765,7 @@ function thisFormManager:get_components_description()
                 current_date["day"], current_date["month"], current_date["year"]
             )
         )
-
-        bdate = os.time{
-            year=bdate["year"],
-            month=bdate["month"],
-            day=bdate["day"]
-        }
-
-        current_date = os.time{
-            year=current_date["year"],
-            month=current_date["month"],
-            day=current_date["day"]
-        }
-
-        return math.floor(os.difftime(current_date, bdate) / (24*60*60*365.25))
+        return calculate_age(current_date, bdate)
     end
 
     local fnSavePlayerAge = function(addrs, comp_name, comp_desc)

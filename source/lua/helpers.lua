@@ -54,6 +54,15 @@ function getProcessNameFromProcessID(iProcessID)
     end
     return 0
 end
+
+function calculate_age(current_date, birthdate)
+    local age = current_date["year"] - birthdate["year"]
+
+    if (current_date["month"] < birthdate["month"] or (current_date["month"] == birthdate["month"] and current_date["day"] < birthdate["day"] )) then
+        age = age - 1
+    end
+    return age
+end
   
 function getOpenedProcessName()
     local process = getOpenedProcessID()

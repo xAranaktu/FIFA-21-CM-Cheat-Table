@@ -209,6 +209,9 @@ function MemoryManager:verify_offset(name)
     self.logger:info(string.format("Veryfing %s offset", name))
 
     local aob = getfield(string.format('AOB_PATTERNS.%s', name))
+    if aob == nil then 
+        return false
+    end
     local nospace_aob = string.gsub(aob, "%s+", "")
     local aob_len = math.floor(string.len(nospace_aob)/2)
     local addres_to_check = self:get_address_with_offset(
@@ -232,7 +235,7 @@ function MemoryManager:verify_offset(name)
             self.logger:warning(string.format("Veryfing %s offset failed", name))
             self.logger:warning(string.format("Bytes in memory: %s != %s: %s", table.concat(bytes_to_verify, ' '), name, aob))
             if bytes_to_verify[1] == 'E9' then
-                self.logger:warning('jmp already set. This happen when you close and reopen Cheat Table without deactivating scripts. Now, restart FIFA and Cheat Engine to fix this problem')
+                self.logger:critical('jmp already set. This happen when you close and reopen Cheat Table without deactivating scripts. Now, restart FIFA and Cheat Engine to fix this problem')
             end
             return false
         end

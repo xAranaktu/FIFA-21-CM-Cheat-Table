@@ -52,6 +52,12 @@ function GameDBManager:add_table(table_name, pointer, first_record_write_to_arr)
     self.logger:debug(string.format(
         "add_table: %s", table_name
     ))
+
+    if not pointer then
+        local critical_error = string.format("Invalid pointer for %s. Restart FIFA and Cheat Engine", table_name)
+        self.logger:critical(critical_error)
+        assert(false, critical_error)
+    end
     local table_data = {
         first_record =      self:get_table_first_record(pointer),
         record_size =       self:get_table_record_size(pointer),
@@ -92,7 +98,7 @@ function GameDBManager:find_record_addr(table_name, arr_flds, n_of_records_to_fi
         if #result >= n_of_records_to_find then
             break
         end
-        if row > written_records then
+        if row >= written_records then
             break
         end
         current_addr = first_record + (record_size*row)
@@ -127,8 +133,14 @@ end
 
 function GameDBManager:get_table_record_field_value(record_addr, table_name, fieldname, raw)
     if raw == nil then raw = false end
+    if not record_addr then
+        self.logger:info(string.format("get_table_record_field_value: 0x%X: %s %s", record_addr or 0, table_name, fieldname))
+        local critical_error = "ERROR. Restart FIFA and Cheat Engine. Open only one instance of Cheat Engine. Don't close cheat engine next time you play to avoid this problem."
+        self.logger:critical(critical_error)
+        assert(false, critical_error)
+    end
 
-    -- self.logger:debug(string.format("get_table_record_field_value: 0x%X: %s %s", record_addr, table_name, fieldname))
+    self.logger:info(string.format("get_table_record_field_value: 0x%X: %s %s", record_addr or 0, table_name or "", fieldname or ""))
     local meta_idx = DB_TABLES_META_MAP[table_name][fieldname]
     local fld_desc = DB_TABLES_META[table_name][meta_idx]
 

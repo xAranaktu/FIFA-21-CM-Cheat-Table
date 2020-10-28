@@ -307,6 +307,16 @@ function TableManager:can_autoactivate(script_id)
     return true
 end
 
+function TableManager:setup_internal_calls()
+    local funcGenReportaddr = self.memory_manager:get_validated_address("fnGenYAReport")
+    if not funcGenReportaddr then return end
+
+    funcGenReportaddr = tonumber(funcGenReportaddr, 16) - 0x2B
+
+    --print(string.format("%X", funcGenReportaddr))
+    writeQword("funcGenReport", funcGenReportaddr)
+end
+
 function TableManager:init_ptrs()
     local base_ptr = self.memory_manager:get_validated_resolved_ptr("DatabaseBasePtr", 4)
     self.logger:debug(string.format("DatabaseBasePtr %X", base_ptr))
@@ -423,25 +433,25 @@ function TableManager:init_ptrs()
         {"pCareerCalendarTableCurrentRecord", "pCareerCalendarTableFirstRecord"}
     )
 
-    local base_ptr2 = self.memory_manager:get_validated_resolved_ptr("BASE_FORM_MORALE_RLC", 3)
-    self.logger:debug(string.format("MoraleBasePtr %X", base_ptr2))
-    writeQword("basePtrTeamFormMoraleRLC", base_ptr2)
+    local base_ptr2 = self.memory_manager:get_validated_resolved_ptr("pScriptsBase", 3)
+    self.logger:debug(string.format("pScriptsBase %X", base_ptr2))
+    writeQword("pScriptsBase", base_ptr2)
 
     if base_ptr2 then
         local form_ptr = self.memory_manager:read_multilevel_pointer(
-            readPointer("basePtrTeamFormMoraleRLC"),
+            readPointer("pScriptsBase"),
             {0x0, 0x518, 0x0, 0x20, 0x130, 0x140}
         ) -- +28 - n on players
     
         local morale_ptr = self.memory_manager:read_multilevel_pointer(
-            readPointer("basePtrTeamFormMoraleRLC"),
+            readPointer("pScriptsBase"),
             {0x0, 0x518, 0x0, 0x20, 0x168}
         ) -- +4A0 - teamid
         -- Start list = teamid + 10
         -- end list = teamid + 18
 
         local pgs_ptr = self.memory_manager:read_multilevel_pointer(
-            readPointer("basePtrTeamFormMoraleRLC"),
+            readPointer("pScriptsBase"),
             {0x0, 0x518, 0x0, 0x20, 0xb0}
         )
         -- Start list = 0x5b0
@@ -457,7 +467,8 @@ function TableManager:autoactivate_scripts()
     local always_activate = {
         14, -- Globals
         18, -- Scripts
-        214 -- Hidden FIFA DB Tables
+        214, -- Hidden FIFA DB Tables
+        4774 -- Obtain Scout Mgr Ptr
     }
 
     for i=1, #always_activate do
@@ -642,6 +653,7 @@ function TableManager:on_attach_to_process()
     self:save_cfg()
     self:autoactivate_scripts()
     self:init_ptrs()
+    self:setup_internal_calls()
 
     self:style_forms()
 
@@ -679,7 +691,7 @@ function TableManager:auto_attach_to_process()
     if pid > 0 and attached_to ~= nil then
         timer_setEnabled(self.auto_attach_timer, false)
         self.logger:info(string.format(
-            "Attached to %s", attached_to
+            "Attached to %s (PID: %d)", attached_to, pid
         ))
         self.proc_name = attached_to
 
