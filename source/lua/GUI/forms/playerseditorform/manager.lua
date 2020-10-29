@@ -544,7 +544,7 @@ function thisFormManager:get_components_description()
 
     local fnOnChangeTrait = function(sender)
         self.has_unsaved_changes = true
-        self.change_list[sender.Name] = sender.State
+        self.change_list[sender.Name] = sender.State >= 1
     end
 
     local fnCommonDBValGetter = function(addrs, table_name, field_name, raw)
@@ -607,15 +607,16 @@ function thisFormManager:get_components_description()
         
 
         local traitbitfield = self.game_db_manager:get_table_record_field_value(addr, table_name, field_name)
-        local is_set = component.State
+        local is_set = component.State >= 1
 
         if is_set then
             traitbitfield = bOr(traitbitfield, bShl(1, comp_desc["trait_bit"]))
-            --self.logger:debug(string.format("v is set: %d", v))
+            self.logger:debug(string.format("v is set: %d", traitbitfield))
         else
             traitbitfield = bAnd(traitbitfield, bNot(bShl(1, comp_desc["trait_bit"])))
-            --self.logger:debug(string.format("v not: %d", v))
+            self.logger:debug(string.format("v not: %d", traitbitfield))
         end
+        self.logger:debug(string.format("Save Trait: %d", traitbitfield))
 
         self.game_db_manager:set_table_record_field_value(addr, table_name, field_name, traitbitfield)
     end
@@ -2914,7 +2915,7 @@ function thisFormManager:fill_form(addrs, playerid)
         ::continue::
     end
 
-    self.logger:info("Update trackbars")
+    self.logger:debug("Update trackbars")
     local trackbars = {
         'AttackTrackBar',
         'DefendingTrackBar',

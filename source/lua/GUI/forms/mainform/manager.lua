@@ -90,6 +90,10 @@ function thisFormManager:assign_current_form_events()
         self:OnWindowCloseClick(sender)
     end
 
+    self.frm.LabelLatestLEVer.OnClick = function(sender)
+        shellExecute("https://www.patreon.com/xAranaktu/posts?filters[tag]=CM Cheat Table")
+    end
+
     self.frm.LiveEditorBanner.OnClick = function(sender)
         shellExecute("https://www.patreon.com/xAranaktu/posts?filters[tag]=Live Editor 21")
     end

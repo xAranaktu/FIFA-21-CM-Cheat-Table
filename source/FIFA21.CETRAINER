@@ -12,7 +12,7 @@
   <CheatEntries>
     <CheatEntry>
       <ID>0</ID>
-      <Description>"v21.1.0.5"</Description>
+      <Description>"v21.1.0.6"</Description>
       <LastState Value="" RealAddress="00000000"/>
       <Color>804000</Color>
       <GroupHeader>1</GroupHeader>
@@ -14436,6 +14436,34 @@ dealloc(newmem_alttab)
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
+          <ID>4775</ID>
+          <Description>"Club Finances"</Description>
+          <Options moHideChildren="1"/>
+          <LastState Value="" RealAddress="00000000"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>4776</ID>
+              <Description>"Transfer Budget"</Description>
+              <LastState Value="217859992" RealAddress="B355DF08"/>
+              <VariableType>4 Bytes</VariableType>
+              <Address>pScriptsBase</Address>
+              <Offsets>
+                <Offset>8</Offset>
+                <Offset>8</Offset>
+                <Offset>238</Offset>
+                <Offset>2a8</Offset>
+                <Offset>18</Offset>
+                <Offset>10</Offset>
+                <Offset>20</Offset>
+                <Offset>0</Offset>
+                <Offset>518</Offset>
+                <Offset>0</Offset>
+              </Offsets>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>4516</ID>
           <Description>"Players Development"</Description>
           <Options moHideChildren="1"/>
@@ -14477,9 +14505,12 @@ ORG_PGMApplyXp = readBytes(INJECT_PGMApplyXp, 12, true)
 
 {$asm}
 
-alloc(newmem_PGMApplyXp, $500, $INJECT_PGMApplyXp)
+alloc(newmem_PGMApplyXp, $1000, $INJECT_PGMApplyXp)
 
 label(code_PGMApplyXp)
+label(check)
+label(applyboost)
+label(nothingandexit)
 label(xpmul)
 label(expadd)
 label(ret_PGMApplyXp)
@@ -14496,10 +14527,35 @@ registersymbol(intBonusXP)
 intBonusXP:
 db 0
 
+// Players to apply boost
+alloc(arr_DevBoostPlayers, 220, $INJECT_PGMApplyXp)
+registersymbol(arr_DevBoostPlayers)
+arr_DevBoostPlayers:
+dq 0
 
+// rbp + 80 = playerid
 newmem_PGMApplyXp:
+  push R8
+  push RDX
+  xor R8, R8
+  mov R8, arr_DevBoostPlayers
+  xor rdx, rdx
+  mov rdx, [rbp+80] // playerid
+  mov edx, [rdx]
   pushf
   xor rcx, rcx
+  mov ecx, [R8]
+  cmp ecx, 0
+  je applyboost
+check:
+  cmp edx, [R8]
+  je applyboost
+  add R8, 4
+  cmp [R8], 0
+  je nothingandexit
+  jmp check
+
+applyboost:
   mov ecx, [fTrainingMultiplier]
   cmp ecx, 0
   je expadd
@@ -14508,16 +14564,28 @@ xpmul:
   mulss xmm1, dword ptr [fTrainingMultiplier]
 
 expadd:
-  maxss xmm1, xmm12
+  maxss xmm1, xmm12 // if &lt;= 0 then 0
   cvttss2si eax,xmm1
   mov ecx, [intBonusXP]
   cmp ecx, 0
   je code_PGMApplyXp
   add eax, ecx
+
 code_PGMApplyXp:
   popf
+  pop R8
+  pop RDX
   mov rcx,[rbp+000000A0]
   jmp ret_PGMApplyXp
+
+nothingandexit:
+  popf
+  pop R8
+  pop RDX
+  cvttss2si eax,xmm1
+  mov rcx,[rbp+000000A0]
+  jmp ret_PGMApplyXp
+
 
 $INJECT_PGMApplyXp:
   jmp newmem_PGMApplyXp
@@ -14537,7 +14605,9 @@ writeBytes(INJECT_PGMApplyXp, ORG_PGMApplyXp)
 
 unregistersymbol(intBonusXP)
 dealloc(intBonusXP)
+dealloc(arr_DevBoostPlayers)
 unregistersymbol(fTrainingMultiplier)
+unregistersymbol(arr_DevBoostPlayers)
 dealloc(fTrainingMultiplier)
 dealloc(newmem_PGMApplyXp)
 
@@ -14582,6 +14652,195 @@ dealloc(newmem_PGMApplyXp)
               <Description>"Exp Multiplier"</Description>
               <VariableType>Float</VariableType>
               <Address>fTrainingMultiplier</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>4781</ID>
+              <Description>"Boost only players"</Description>
+              <Options moHideChildren="1"/>
+              <LastState Value="" RealAddress="00000000"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>4782</ID>
+                  <Description>"PlayerID 1"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4783</ID>
+                  <Description>"PlayerID 2"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+4</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4787</ID>
+                  <Description>"PlayerID 3"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+8</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4789</ID>
+                  <Description>"PlayerID 4"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4788</ID>
+                  <Description>"PlayerID 5"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+10</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4800</ID>
+                  <Description>"PlayerID 6"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+14</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4799</ID>
+                  <Description>"PlayerID 7"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+18</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4798</ID>
+                  <Description>"PlayerID 8"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+1C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4797</ID>
+                  <Description>"PlayerID 9"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+20</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4796</ID>
+                  <Description>"PlayerID 10"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+24</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4795</ID>
+                  <Description>"PlayerID 11"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+28</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4794</ID>
+                  <Description>"PlayerID 12"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+2C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4793</ID>
+                  <Description>"PlayerID 13"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+30</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4792</ID>
+                  <Description>"PlayerID 14"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+34</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4791</ID>
+                  <Description>"PlayerID 15"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+38</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4790</ID>
+                  <Description>"PlayerID 16"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+3C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4814</ID>
+                  <Description>"PlayerID 17"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+40</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4813</ID>
+                  <Description>"PlayerID 18"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+44</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4812</ID>
+                  <Description>"PlayerID 19"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+48</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4811</ID>
+                  <Description>"PlayerID 20"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+4C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4810</ID>
+                  <Description>"PlayerID 21"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+50</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4809</ID>
+                  <Description>"PlayerID 22"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+54</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4808</ID>
+                  <Description>"PlayerID 23"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+58</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4807</ID>
+                  <Description>"PlayerID 24"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+5C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4806</ID>
+                  <Description>"PlayerID 25"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+60</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4805</ID>
+                  <Description>"PlayerID 26"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+64</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4804</ID>
+                  <Description>"PlayerID 27"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+68</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4803</ID>
+                  <Description>"PlayerID 28"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+6C</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4802</ID>
+                  <Description>"PlayerID 29"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+70</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4801</ID>
+                  <Description>"PlayerID 30"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>arr_DevBoostPlayers+74</Address>
+                </CheatEntry>
+              </CheatEntries>
             </CheatEntry>
           </CheatEntries>
         </CheatEntry>
@@ -20089,6 +20348,394 @@ dealloc(HalfLength)
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
+          <ID>4777</ID>
+          <Description>"Transfer HUB"</Description>
+          <Options moHideChildren="1"/>
+          <LastState Value="" RealAddress="00000000"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>4780</ID>
+              <Description>"Change Release Clause value to 1"</Description>
+              <LastState/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{
+GAME VERSION:
+- Script should always work with newest version of the game which can be downloaded from Origin.
+
+RISK LEVEL:
+- 1/5 (Very small chance that this script will harm your cm save.)
+
+DESCRIPTION:
+  This script will change release clause of all players that got an release clause and are on your shortlist in transfer hub.
+  If player doesn't have any release clause then nothing will happen.
+
+HOW TO USE:
+  1. Add player(s) with release clause to your shortlist in game
+  2. Activate script
+  3. In game go to Transfer Hub and enter shortlist
+  4. Done, all players that got previous release clause got new release clause set at $1.
+
+VIDEO TUTORIAL:
+- https://www.youtube.com/watch?v=qVEnMdiH0Po&amp;list=PLx3DZm1ifjQw5exchXxcZpj0oN7_eDy-Q&amp;index=4&amp;t=2047s
+}
+
+[ENABLE]
+//code from here to '[DISABLE]' will be used to enable the cheat
+{$lua}
+if syntaxcheck then return end
+onScriptActivate()
+
+INJECT_EditReleaseClause = gCTManager.memory_manager:get_validated_address('EditReleaseClause')
+ORG_EditReleaseClause = readBytes(INJECT_EditReleaseClause, 12, true)
+
+{$asm}
+
+alloc(newmem_EditReleaseClause, $500, $INJECT_EditReleaseClause)
+
+label(code_EditReleaseClause)
+label(ret_EditReleaseClause)
+
+newmem_EditReleaseClause:
+  mov [rax+08], #1
+code_EditReleaseClause:
+  mov ecx,[rax+08]
+  cmp ecx,-01
+  jmp ret_EditReleaseClause
+
+$INJECT_EditReleaseClause:
+  jmp newmem_EditReleaseClause
+  nop
+ret_EditReleaseClause:
+
+[DISABLE]
+//code_EditReleaseClause from here till the end of the code_EditReleaseClause will be used to disable the cheat
+{$lua}
+writeBytes(INJECT_EditReleaseClause, ORG_EditReleaseClause)
+{$asm}
+
+dealloc(newmem_EditReleaseClause)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "FIFA21.exe"+53D017D
+
+"FIFA21.exe"+53D0162: B9 01 00 00 00        -  mov ecx,00000001
+"FIFA21.exe"+53D0167: EB 02                 -  jmp FIFA21.exe+53D016B
+"FIFA21.exe"+53D0169: 33 C9                 -  xor ecx,ecx
+"FIFA21.exe"+53D016B: 84 C9                 -  test cl,cl
+"FIFA21.exe"+53D016D: 75 09                 -  jne FIFA21.exe+53D0178
+"FIFA21.exe"+53D016F: 48 83 C0 0C           -  add rax,0C
+"FIFA21.exe"+53D0173: 49 3B C0              -  cmp rax,r8
+"FIFA21.exe"+53D0176: 75 E0                 -  jne FIFA21.exe+53D0158
+"FIFA21.exe"+53D0178: 49 3B C0              -  cmp rax,r8
+"FIFA21.exe"+53D017B: 74 0E                 -  je FIFA21.exe+53D018B
+// ---------- INJECTING HERE ----------
+"FIFA21.exe"+53D017D: 8B 48 08              -  mov ecx,[rax+08]
+"FIFA21.exe"+53D0180: 83 F9 FF              -  cmp ecx,-01
+// ---------- DONE INJECTING  ----------
+"FIFA21.exe"+53D0183: 74 06                 -  je FIFA21.exe+53D018B
+"FIFA21.exe"+53D0185: 89 8B A8 00 00 00     -  mov [rbx+000000A8],ecx
+"FIFA21.exe"+53D018B: 48 8B 5C 24 40        -  mov rbx,[rsp+40]
+"FIFA21.exe"+53D0190: 48 8B 6C 24 48        -  mov rbp,[rsp+48]
+"FIFA21.exe"+53D0195: 48 8B 74 24 50        -  mov rsi,[rsp+50]
+"FIFA21.exe"+53D019A: 48 83 C4 30           -  add rsp,30
+"FIFA21.exe"+53D019E: 5F                    -  pop rdi
+"FIFA21.exe"+53D019F: C3                    -  ret
+"FIFA21.exe"+53D01A0: 48 89 5C 24 08        -  mov [rsp+08],rbx
+"FIFA21.exe"+53D01A5: 48 89 74 24 10        -  mov [rsp+10],rsi
+}
+
+
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>4778</ID>
+              <Description>"Allow Transfer approach"</Description>
+              <LastState/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{
+AUTHOR:
+- Aranaktu
+
+GAME VERSION:
+- Script should always work with newest version of the game which can be downloaded from Origin.
+
+RISK LEVEL:
+- 3/5 (Safe to use if you will not try to buy players that are on loan)
+
+DESCRIPTION:
+  This script will allow you to buy players that are 'unwilling to relocate' etc.
+  DON'T try to buy players that are on loan!
+
+HOW TO USE:
+  1. Activate script
+  2. 'Aproach to buy' the player
+
+VIDEO TUTORIAL:
+- NONE
+}
+
+[ENABLE]
+//code from here to '[DISABLE]' will be used to enable the cheat
+{$lua}
+if syntaxcheck then return end
+onScriptActivate()
+
+INJECT_AllowTransferAppThTxt = gCTManager.memory_manager:get_validated_address('AllowTransferAppThTxt')
+ORG_AllowTransferAppThTxt = readBytes(INJECT_AllowTransferAppThTxt, 12, true)
+
+INJECT_AllowTransferAppBtnClick = gCTManager.memory_manager:get_validated_address('AllowTransferAppBtnClick')
+ORG_AllowTransferAppBtnClick = readBytes(INJECT_AllowTransferAppBtnClick, 12, true)
+
+INJECT_AllowSign = gCTManager.memory_manager:get_validated_address('AllowSign')
+ORG_AllowSign = readBytes(INJECT_AllowSign, 12, true)
+
+{$asm}
+
+alloc(newmem_AllowTransferAppThTxt, $500, $INJECT_AllowTransferAppThTxt)
+
+label(code_AllowTransferAppThTxt)
+label(ret_AllowTransferAppThTxt)
+
+newmem_AllowTransferAppThTxt:
+  mov eax, #16
+code_AllowTransferAppThTxt:
+  mov ebx,eax
+  cmp eax,0E
+  jmp ret_AllowTransferAppThTxt
+
+$INJECT_AllowTransferAppThTxt:
+  jmp newmem_AllowTransferAppThTxt
+ret_AllowTransferAppThTxt:
+
+alloc(newmem_AllowTransferAppBtnClick, $500, $INJECT_AllowTransferAppBtnClick)
+
+label(code_AllowTransferAppBtnClick)
+label(ret_AllowTransferAppBtnClick)
+
+newmem_AllowTransferAppBtnClick:
+code_AllowTransferAppBtnClick:
+  call r9
+  mov eax, #16
+  mov r14d,eax
+  jmp ret_AllowTransferAppBtnClick
+
+$INJECT_AllowTransferAppBtnClick:
+  jmp newmem_AllowTransferAppBtnClick
+  nop
+ret_AllowTransferAppBtnClick:
+
+alloc(newmem_AllowSign, $500, $INJECT_AllowSign)
+
+label(code_AllowSign)
+label(ret_AllowSign)
+
+newmem_AllowSign:
+code_AllowSign:
+  call r9
+  mov [rbp+58],eax
+  jmp ret_AllowSign
+
+$INJECT_AllowSign:
+  jmp newmem_AllowSign
+  nop
+ret_AllowSign:
+
+[DISABLE]
+//code_AllowTransferAppThTxt from here till the end of the code_AllowTransferAppThTxt will be used to disable the cheat
+{$lua}
+writeBytes(INJECT_AllowTransferAppThTxt, ORG_AllowTransferAppThTxt)
+writeBytes(INJECT_AllowTransferAppBtnClick, ORG_AllowTransferAppBtnClick)
+writeBytes(INJECT_AllowSign, ORG_AllowSign)
+{$asm}
+
+dealloc(newmem_AllowTransferAppThTxt)
+dealloc(newmem_AllowTransferAppBtnClick)
+dealloc(newmem_AllowSign)
+{
+// ORIGINAL CODE - INJECTION POINT: "FIFA21.exe"+53D0DC8
+
+"FIFA21.exe"+53D0D95: 0F 85 6E 05 00 00        -  jne FIFA21.exe+53D1309
+"FIFA21.exe"+53D0D9B: 45 84 FF                 -  test r15l,r15l
+"FIFA21.exe"+53D0D9E: 0F 85 65 05 00 00        -  jne FIFA21.exe+53D1309
+"FIFA21.exe"+53D0DA4: 49 8B 45 08              -  mov rax,[r13+08]
+"FIFA21.exe"+53D0DA8: 48 8B 80 38 0F 00 00     -  mov rax,[rax+00000F38]
+"FIFA21.exe"+53D0DAF: 48 8B 08                 -  mov rcx,[rax]
+"FIFA21.exe"+53D0DB2: 44 8B 85 B8 00 00 00     -  mov r8d,[rbp+000000B8]
+"FIFA21.exe"+53D0DB9: 8B 55 70                 -  mov edx,[rbp+70]
+"FIFA21.exe"+53D0DBC: 48 8B 89 80 14 00 00     -  mov rcx,[rcx+00001480]
+"FIFA21.exe"+53D0DC3: E8 38 D4 49 00           -  call FIFA21.exe+586E200
+// ---------- INJECTING HERE ----------
+"FIFA21.exe"+53D0DC8: 8B D8                    -  mov ebx,eax
+"FIFA21.exe"+53D0DCA: 83 F8 0E                 -  cmp eax,0E
+// ---------- DONE INJECTING  ----------
+"FIFA21.exe"+53D0DCD: 77 13                    -  ja FIFA21.exe+53D0DE2
+"FIFA21.exe"+53D0DCF: B8 65 4D 00 00           -  mov eax,00004D65
+"FIFA21.exe"+53D0DD4: 0F A3 D8                 -  bt eax,ebx
+"FIFA21.exe"+53D0DD7: 73 09                    -  jae FIFA21.exe+53D0DE2
+"FIFA21.exe"+53D0DD9: B8 01 00 00 00           -  mov eax,00000001
+"FIFA21.exe"+53D0DDE: 33 FF                    -  xor edi,edi
+"FIFA21.exe"+53D0DE0: EB 04                    -  jmp FIFA21.exe+53D0DE6
+"FIFA21.exe"+53D0DE2: 33 FF                    -  xor edi,edi
+"FIFA21.exe"+53D0DE4: 8B C7                    -  mov eax,edi
+"FIFA21.exe"+53D0DE6: 84 C0                    -  test al,al
+}
+{
+// ORIGINAL CODE - INJECTION POINT: "FIFA21.exe"+48636B6
+
+"FIFA21.exe"+486368E: 45 32 FF              -  xor r15l,r15l
+"FIFA21.exe"+4863691: 48 8B 4D 7F           -  mov rcx,[rbp+7F]
+"FIFA21.exe"+4863695: 48 8B 01              -  mov rax,[rcx]
+"FIFA21.exe"+4863698: FF 90 20 01 00 00     -  call qword ptr [rax+00000120]
+"FIFA21.exe"+486369E: 48 89 45 C7           -  mov [rbp-39],rax
+"FIFA21.exe"+48636A2: 48 8B 4B 20           -  mov rcx,[rbx+20]
+"FIFA21.exe"+48636A6: 4C 8B 01              -  mov r8,[rcx]
+"FIFA21.exe"+48636A9: 4D 8B 88 10 01 00 00  -  mov r9,[r8+00000110]
+"FIFA21.exe"+48636B0: 45 8B C6              -  mov r8d,r14d
+"FIFA21.exe"+48636B3: 41 8B D5              -  mov edx,r13d
+// ---------- INJECTING HERE ----------
+"FIFA21.exe"+48636B6: 41 FF D1              -  call r9
+"FIFA21.exe"+48636B9: 44 8B F0              -  mov r14d,eax
+// ---------- DONE INJECTING  ----------
+"FIFA21.exe"+48636BC: 89 45 67              -  mov [rbp+67],eax
+"FIFA21.exe"+48636BF: 48 8B 0D 82 AC 65 03  -  mov rcx,[FIFA21.exe+7EBE348]
+"FIFA21.exe"+48636C6: 4C 8B 41 30           -  mov r8,[rcx+30]
+"FIFA21.exe"+48636CA: BA 47 F0 97 12        -  mov edx,1297F047
+"FIFA21.exe"+48636CF: 48 8D 0D 72 AC 65 03  -  lea rcx,[FIFA21.exe+7EBE348]
+"FIFA21.exe"+48636D6: 41 FF D0              -  call r8
+"FIFA21.exe"+48636D9: 48 85 C0              -  test rax,rax
+"FIFA21.exe"+48636DC: 74 17                 -  je FIFA21.exe+48636F5
+"FIFA21.exe"+48636DE: 48 8B 08              -  mov rcx,[rax]
+"FIFA21.exe"+48636E1: 4C 8B 41 18           -  mov r8,[rcx+18]
+}
+
+{
+// ORIGINAL CODE - INJECTION POINT: "FIFA21.exe"+4864D22
+
+"FIFA21.exe"+4864CF3: 48 8B C8              -  mov rcx,rax
+"FIFA21.exe"+4864CF6: FF 92 30 01 00 00     -  call qword ptr [rdx+00000130]
+"FIFA21.exe"+4864CFC: 48 89 45 B8           -  mov [rbp-48],rax
+"FIFA21.exe"+4864D00: C7 45 60 FF FF FF FF  -  mov [rbp+60],FFFFFFFF
+"FIFA21.exe"+4864D07: C7 45 48 FF FF FF FF  -  mov [rbp+48],FFFFFFFF
+"FIFA21.exe"+4864D0E: 49 8B 0C 24           -  mov rcx,[r12]
+"FIFA21.exe"+4864D12: 4C 8B 89 38 01 00 00  -  mov r9,[rcx+00000138]
+"FIFA21.exe"+4864D19: 45 8B C7              -  mov r8d,r15d
+"FIFA21.exe"+4864D1C: 41 8B D6              -  mov edx,r14d
+"FIFA21.exe"+4864D1F: 49 8B CC              -  mov rcx,r12
+// ---------- INJECTING HERE ----------
+"FIFA21.exe"+4864D22: 41 FF D1              -  call r9
+"FIFA21.exe"+4864D25: 89 45 58              -  mov [rbp+58],eax
+// ---------- DONE INJECTING  ----------
+"FIFA21.exe"+4864D28: 85 C0                 -  test eax,eax
+"FIFA21.exe"+4864D2A: 0F 85 A4 01 00 00     -  jne FIFA21.exe+4864ED4
+"FIFA21.exe"+4864D30: 48 8B 07              -  mov rax,[rdi]
+"FIFA21.exe"+4864D33: 48 8B CF              -  mov rcx,rdi
+"FIFA21.exe"+4864D36: FF 90 18 02 00 00     -  call qword ptr [rax+00000218]
+"FIFA21.exe"+4864D3C: 48 8B 10              -  mov rdx,[rax]
+"FIFA21.exe"+4864D3F: 48 8B C8              -  mov rcx,rax
+"FIFA21.exe"+4864D42: FF 52 68              -  call qword ptr [rdx+68]
+"FIFA21.exe"+4864D45: 48 8B 10              -  mov rdx,[rax]
+"FIFA21.exe"+4864D48: 48 8B C8              -  mov rcx,rax
+}
+
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>4779</ID>
+              <Description>"Allow Loan approach"</Description>
+              <LastState/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{
+AUTHOR:
+- Aranaktu
+
+GAME VERSION:
+- Script should always work with newest version of the game which can be downloaded from Origin.
+
+RISK LEVEL:
+- 1/5 (Very small chance that this script will harm your cm save.)
+
+DESCRIPTION:
+  This script will allow you to start loan negotiations
+
+HOW TO USE:
+  1. Activate script
+  2. Start negotiations
+
+VIDEO TUTORIAL:
+- NONE
+}
+
+
+[ENABLE]
+//code from here to '[DISABLE]' will be used to enable the cheat
+{$lua}
+if syntaxcheck then return end
+onScriptActivate()
+
+INJECT_AllowLoanApp = gCTManager.memory_manager:get_validated_address('AllowLoanApp')
+ORG_AllowLoanApp = readBytes(INJECT_AllowLoanApp, 12, true)
+
+{$asm}
+
+alloc(newmem_AllowLoanApp, $500, $INJECT_AllowLoanApp)
+
+label(code_AllowLoanApp)
+label(ret_AllowLoanApp)
+
+newmem_AllowLoanApp:
+code_AllowLoanApp:
+  call r9
+  xor eax, eax
+  mov r15d,eax
+  jmp ret_AllowLoanApp
+
+$INJECT_AllowLoanApp:
+  jmp newmem_AllowLoanApp
+  nop
+ret_AllowLoanApp:
+
+[DISABLE]
+//code_AllowLoanApp from here till the end of the code_AllowLoanApp will be used to disable the cheat
+{$lua}
+writeBytes(INJECT_AllowLoanApp, ORG_AllowLoanApp)
+{$asm}
+
+dealloc(newmem_AllowLoanApp)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "FIFA21.exe"+4862E11
+
+"FIFA21.exe"+4862DE2: 48 8B C8              -  mov rcx,rax
+"FIFA21.exe"+4862DE5: FF 92 40 01 00 00     -  call qword ptr [rdx+00000140]
+"FIFA21.exe"+4862DEB: 48 89 45 B8           -  mov [rbp-48],rax
+"FIFA21.exe"+4862DEF: C7 45 60 FF FF FF FF  -  mov [rbp+60],FFFFFFFF
+"FIFA21.exe"+4862DF6: C7 45 48 FF FF FF FF  -  mov [rbp+48],FFFFFFFF
+"FIFA21.exe"+4862DFD: 48 8B 4E 20           -  mov rcx,[rsi+20]
+"FIFA21.exe"+4862E01: 4C 8B 01              -  mov r8,[rcx]
+"FIFA21.exe"+4862E04: 4D 8B 88 28 01 00 00  -  mov r9,[r8+00000128]
+"FIFA21.exe"+4862E0B: 45 8B C5              -  mov r8d,r13d
+"FIFA21.exe"+4862E0E: 41 8B D4              -  mov edx,r12d
+// ---------- INJECTING HERE ----------
+"FIFA21.exe"+4862E11: 41 FF D1              -  call r9
+"FIFA21.exe"+4862E14: 44 8B F8              -  mov r15d,eax
+// ---------- DONE INJECTING  ----------
+"FIFA21.exe"+4862E17: 89 45 58              -  mov [rbp+58],eax
+"FIFA21.exe"+4862E1A: 48 8B 0D 27 B5 65 03  -  mov rcx,[FIFA21.exe+7EBE348]
+"FIFA21.exe"+4862E21: 4C 8B 41 30           -  mov r8,[rcx+30]
+"FIFA21.exe"+4862E25: BA 47 F0 97 12        -  mov edx,1297F047
+"FIFA21.exe"+4862E2A: 48 8D 0D 17 B5 65 03  -  lea rcx,[FIFA21.exe+7EBE348]
+"FIFA21.exe"+4862E31: 41 FF D0              -  call r8
+"FIFA21.exe"+4862E34: 48 85 C0              -  test rax,rax
+"FIFA21.exe"+4862E37: 74 17                 -  je FIFA21.exe+4862E50
+"FIFA21.exe"+4862E39: 48 8B 08              -  mov rcx,[rax]
+"FIFA21.exe"+4862E3C: 4C 8B 41 18           -  mov r8,[rcx+18]
+}
+</AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>2677</ID>
           <Description>"Side Changer"</Description>
           <Options moHideChildren="1"/>
@@ -21450,14 +22097,14 @@ bAwayTeam_Tired:
                 <CheatEntry>
                   <ID>4460</ID>
                   <Description>"PlayerID 1"</Description>
-                  <LastState Value="2212600848" RealAddress="13FFE0010"/>
+                  <LastState Value="3735288080" RealAddress="13FFE0010"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4466</ID>
                   <Description>"PlayerID 2"</Description>
-                  <LastState Value="1" RealAddress="13FFE0014"/>
+                  <LastState Value="0" RealAddress="13FFE0014"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+4</Address>
                 </CheatEntry>
@@ -21922,7 +22569,7 @@ dealloc(newmem_ReleasePlayerFee)
   <UserdefinedSymbols>
     <SymbolEntry>
       <Name>pScriptsBase</Name>
-      <Address>13FFD0000</Address>
+      <Address>13FFE0000</Address>
     </SymbolEntry>
     <SymbolEntry>
       <Name>arrNeverTiredPlayerIDs</Name>
@@ -21930,7 +22577,7 @@ dealloc(newmem_ReleasePlayerFee)
     </SymbolEntry>
     <SymbolEntry>
       <Name>funcGenReport</Name>
-      <Address>13FFD0020</Address>
+      <Address>13FFE0020</Address>
     </SymbolEntry>
     <SymbolEntry>
       <Name>bNewReport</Name>
@@ -21942,7 +22589,7 @@ dealloc(newmem_ReleasePlayerFee)
     </SymbolEntry>
     <SymbolEntry>
       <Name>pScoutMgr</Name>
-      <Address>13FFD0010</Address>
+      <Address>13FFE0010</Address>
     </SymbolEntry>
   </UserdefinedSymbols>
   <LuaScript>-- Hello!

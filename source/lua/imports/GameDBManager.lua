@@ -140,7 +140,7 @@ function GameDBManager:get_table_record_field_value(record_addr, table_name, fie
         assert(false, critical_error)
     end
 
-    self.logger:info(string.format("get_table_record_field_value: 0x%X: %s %s", record_addr or 0, table_name or "", fieldname or ""))
+    --self.logger:info(string.format("get_table_record_field_value: 0x%X: %s %s", record_addr or 0, table_name or "", fieldname or ""))
     local meta_idx = DB_TABLES_META_MAP[table_name][fieldname]
     local fld_desc = DB_TABLES_META[table_name][meta_idx]
 

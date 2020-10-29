@@ -48,6 +48,12 @@ AOB_PATTERNS = {
     ClubJobOffer = '48 8B BE D8 00 00 00 48 2B',
     ClubJobOfferAlwaysAccept = 'FF 50 08 3B 47 2C',
     PAPNewOffer = '83 B9 BC 01 00 00 FF 74 0E 44 38 A1 D0 01 00 00 C6 44 24 ?? 01 75 05 44 88 64 24 ?? 83 B9 BC 01 00 00 FF',
+    AllowLoanApp = '41 FF D1 44 8B F8 89 45 58',
+    AllowTransferAppThTxt = '8B D8 83 F8 0E 77',
+    AllowTransferAppBtnClick = '41 FF D1 44 8B F0 89 45 67',
+    AllowSign = '41 FF D1 89 45 58',
+    AllowSignText = '41 FF D1 89 45 58',
+    EditReleaseClause = '8B 48 08 83 F9 FF 74 06 89 8B',
 
     MatchTimer = '8B 41 50 89 47 10',
     MatchScore = '45 8B 90 B0 26 02 00',
