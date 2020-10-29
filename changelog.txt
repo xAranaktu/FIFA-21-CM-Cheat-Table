@@ -139,3 +139,18 @@ v21.1.0.7:
         - Performance Bonus
         - Loan Wage Split
     - Added again "Disable Player Growth manager"
+
+v21.1.0.8:
+    - Fixed:
+        - Removing Injury from player
+        - Head Type picker in Players Editor
+        - Adjusting Overallrating (if below 0 then ovr = 1, if above 99 then ovr = 99)
+        - Saving player in Players Editor (Pointer for player growth system changed by EA in title update 4)
+        - Fixed problem with activating "Disable Player Growth Manager" script (was not working after Title update 4)
+    - Added To GUI -> Players Editor
+        - Dynamic preview for youth player miniface
+    - Added "Editing Player"
+        - Player Data
+            - Name
+            - Birthdate
+            - Kit Number
