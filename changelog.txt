@@ -154,3 +154,7 @@ v21.1.0.8:
             - Name
             - Birthdate
             - Kit Number
+
+v21.1.0.9:
+    - Added:
+        - "Clone" tab to players editor
