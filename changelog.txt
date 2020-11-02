@@ -158,3 +158,14 @@ v21.1.0.8:
 v21.1.0.9:
     - Added:
         - "Clone" tab to players editor
+        
+v21.1.1.0:
+    - Fixed:
+        - Editing workrates via players editor
+        - Fixed cloning players from fifa 15-20
+    - Added to "Play As Player"
+        - Training:
+            - Unlimited Training Sessions
+            - Always Best Grade
+            - More efficient training
+            - Training Everyday
