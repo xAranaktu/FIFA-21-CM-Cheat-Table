@@ -515,10 +515,49 @@ function thisFormManager:update_cached_field(playerid, field_name, new_value)
 end
 
 function thisFormManager:get_components_description()
+    local fnUpdateComboHint = function(sender)
+        if sender.ClassName == "TCEComboBox" then
+            sender.Hint = sender.Items[sender.ItemIndex]
+        end
+    end
+
     local fnCommonOnChange = function(sender)
         -- self.logger:debug(string.format("thisFormManager: %s", sender.Name))
+        fnUpdateComboHint(sender)
         self.has_unsaved_changes = true
         self.change_list[sender.Name] = sender.Text or sender.ItemIndex
+    end
+
+    local fnPerformanceBonusOnChange = function(sender)
+        fnCommonOnChange(sender)
+
+        if sender.ItemIndex == 0 then
+            self.frm.PerformanceBonusCountLabel.Visible = false
+            self.frm.PerformanceBonusCountEdit.Visible = false
+            self.frm.PerformanceBonusValueLabel.Visible = false
+            self.frm.PerformanceBonusValueEdit.Visible = false
+        else
+            self.frm.PerformanceBonusCountLabel.Visible = true
+            self.frm.PerformanceBonusCountEdit.Visible = true
+            self.frm.PerformanceBonusValueLabel.Visible = true
+            self.frm.PerformanceBonusValueEdit.Visible = true
+        end
+    end
+
+    local fnIsInjuredOnChange = function(sender)
+        fnCommonOnChange(sender)
+
+        if sender.ItemIndex == 0 then
+            self.frm.InjuryCB.Visible = false
+            self.frm.InjuryLabel.Visible = false
+            self.frm.FullFitDateEdit.Visible = false
+            self.frm.FullFitDateLabel.Visible = false
+        else
+            self.frm.InjuryCB.Visible = true
+            self.frm.InjuryLabel.Visible = true
+            self.frm.FullFitDateEdit.Visible = true
+            self.frm.FullFitDateLabel.Visible = true
+        end
     end
 
     local fnOnChangeAttribute = function(sender)
@@ -2706,6 +2745,77 @@ function thisFormManager:get_components_description()
             events = {
                 OnChange = fnCommonOnChange
             }
+        },
+
+        WageEdit = {
+            events = {
+                OnChange = fnCommonOnChange
+            }
+        },
+        SquadRoleCB = {
+            events = {
+                OnChange = fnCommonOnChange
+            }
+        },
+        ReleaseClauseEdit = {
+            events = {
+                OnChange = fnCommonOnChange
+            }
+        },
+        PerformanceBonusCountEdit = {
+            events = {
+                OnChange = fnCommonOnChange
+            }
+        },
+        PerformanceBonusValueEdit = {
+            events = {
+                OnChange = fnCommonOnChange
+            }
+        },
+        InjuryCB = {
+            events = {
+                OnChange = fnCommonOnChange
+            }
+        }, 
+        DurabilityEdit= {
+            events = {
+                OnChange = fnCommonOnChange
+            }
+        },
+        FullFitDateEdit = {
+            events = {
+                OnChange = fnCommonOnChange
+            }
+        },
+        MoraleCB = {
+            events = {
+                OnChange = fnCommonOnChange
+            }
+        },
+        FormCB = {
+            events = {
+                OnChange = fnCommonOnChange
+            }
+        },
+        LoanWageSplitEdit = {
+            events = {
+                OnChange = fnCommonOnChange
+            }
+        },
+        SharpnessEdit = {
+            events = {
+                OnChange = fnCommonOnChange
+            }
+        },
+        PerformanceBonusTypeCB = {
+            events = {
+                OnChange = fnPerformanceBonusOnChange
+            }
+        },
+        IsInjuredCB = {
+            events = {
+                OnChange = fnIsInjuredOnChange
+            }
         }
     }
 
@@ -2748,15 +2858,7 @@ function thisFormManager:onShow(sender)
     self.frm.WhileLoadingPanel.Visible = true
 
     -- Not READY!
-    self.frm.PlayerInfoGroup8.Visible = false
-    self.frm.PlayerInfoGroup9.Visible = false
-    self.frm.PlayerInfoGroup6.Visible = false
-    self.frm.SquadRoleLabel.Visible = false
-    self.frm.SquadRoleCB.Visible = false
-    self.frm.WageLabel.Visible = false
-    self.frm.WageEdit.Visible = false
     self.frm.PlayerCloneTab.Visible = false
-
 
     local onShow_delayed_wrapper = function()
         self:onShow_delayed()
@@ -2779,6 +2881,8 @@ function thisFormManager:onShow_delayed()
     self.current_addrs["players"] = readPointer("pPlayersTableCurrentRecord")
     self.current_addrs["teamplayerlinks"] = readPointer("pTeamplayerlinksTableCurrentRecord")
     self.current_addrs["career_calendar"] = readPointer("pCareerCalendarTableCurrentRecord")
+    self.current_addrs["career_users"] = readPointer("pUsersTableFirstRecord")
+    gCTManager:init_ptrs()
 
     self:fill_form(self.current_addrs)
     self:recalculate_ovr(true)
@@ -2852,6 +2956,10 @@ function thisFormManager:fill_form(addrs, playerid)
         )
     end
 
+    if not playerid then
+        playerid = self.game_db_manager:get_table_record_field_value(record_addr, "players", "playerid")
+    end
+
     self.logger:debug(string.format("fill_form: %s", self.name))
     if self.form_components_description == nil then
         self.form_components_description = self:get_components_description()
@@ -2903,6 +3011,7 @@ function thisFormManager:fill_form(addrs, playerid)
             else
                 component.ItemIndex = 0
             end
+            component.Hint = component.Items[component.ItemIndex]
         elseif component_class == 'TCECheckBox' then
             component.State = comp_desc["valGetter"](addrs, comp_desc)
         end
@@ -2929,15 +3038,979 @@ function thisFormManager:fill_form(addrs, playerid)
         self:update_trackbar(self.frm[trackbars[i]])
     end
 
+    local ss_hs = self:load_headshot(
+        playerid, record_addr
+    )
+    if self:safe_load_picture_from_ss(self.frm.Headshot.Picture, ss_hs) then
+        ss_hs.destroy()
+        self.frm.Headshot.Picture.stretch=true
+    end
+
+    local team_record = self:find_player_club_team_record(playerid)
+    local teamid = 0
+    if team_record > 0 then
+        teamid = self.game_db_manager:get_table_record_field_value(team_record, "teamplayerlinks", "teamid")
+        local ss_c = self:load_crest(
+            nil, team_record
+        )
+        if self:safe_load_picture_from_ss(self.frm.Crest64x64.Picture, ss_c) then
+            ss_c.destroy()
+            self.frm.Crest64x64.Picture.stretch=true
+        end
+        self.frm.TeamIDEdit.Text = teamid
+    else
+        self.frm.TeamIDEdit.Text = "Unknown"
+    end
+
+
+    -- TODO Load name
+    self.frm.PlayerNameLabel.Caption = ""
+
+    local career_only_comps = {
+        "WageLabel",
+        "WageEdit",
+        "SquadRoleLabel",
+        "SquadRoleCB",
+        "LoanWageSplitLabel",
+        "LoanWageSplitEdit",
+        "PerformanceBonusTypeLabel",
+        "PerformanceBonusTypeCB",
+        "PerformanceBonusCountLabel",
+        "PerformanceBonusCountEdit",
+        "PerformanceBonusValueLabel",
+        "PerformanceBonusValueEdit",
+        "IsInjuredCB",
+        "InjuredLabel",
+        "InjuryCB",
+        "InjuryLabel",
+        "DurabilityEdit",
+        "DurabilityLabel",
+        "FullFitDateEdit",
+        "FullFitDateLabel",
+        "FormCB",
+        "FormLabel",
+        "MoraleCB",
+        "MoraleLabel",
+        "SharpnessEdit",
+        "SharpnessLabel",
+        "ReleaseClauseEdit",
+        "ReleaseClauseLabel"
+    }
+
+    local is_in_cm = is_cm_loaded()
+
+    local is_manager_career = false
+    local is_manager_career_valid = false
+    if is_in_cm then
+        is_manager_career = self:is_manager_career(addrs["career_users"])
+        if type(is_manager_career) == "boolean" then
+            is_manager_career_valid = true
+        end
+    end
+
+    if is_in_cm and is_manager_career_valid then
+        local userclubtid = self:get_user_clubteamid(addrs["career_users"])
+        local is_in_user_club = false
+        if teamid > 0 and userclubtid > 0 then
+            -- is_in_user_team
+            if teamid == userclubtid then
+                self.logger:debug("is in user club")
+                is_in_user_club = true
+            end
+        end
+        if is_manager_career then
+            self.logger:debug("manager career")
+        else
+            self.logger:debug("player career")
+        end
+        -- player info - contract
+        self:load_player_contract(playerid, is_in_user_club)
+
+        -- Player info - fitness & injury
+        self:load_player_fitness(playerid)
+
+        -- Player info - form
+        self:load_player_form(playerid)
+
+        -- Player info - Morale
+        self:load_player_morale(playerid)
+
+        -- Player Info - sharpness
+        self:load_player_sharpness(playerid, is_manager_career)
+
+        -- Player info - Release Clause
+        self:load_player_release_clause(playerid)
+
+        for i=1, #career_only_comps do
+            self.change_list[career_only_comps[i]] = nil
+        end
+
+    else
+        for i=1, #career_only_comps do
+            self.frm[career_only_comps[i]].Visible = false
+        end
+    end
+
     self.has_unsaved_changes = false
+    self.logger:debug(string.format("fill_form done", self.name))
 end
+
+function thisFormManager:get_player_fitness_addr(playerid)
+    local fitness_manager_ptr = self.memory_manager:read_multilevel_pointer(
+        readPointer("pCareerModeSmth"),
+        {0x0, 0x10, 0x48, 0x30, 0x180+0x50}
+    )
+    -- 0x19a0 start
+    -- 0x19a8 end
+    -- fm001
+    local _start = readPointer(fitness_manager_ptr + 0x19a0)
+    local _end = readPointer(fitness_manager_ptr + 0x19a8)
+    if (not _start) or (not _end) then
+        self.logger:info("No Fitness start or end")
+        return -1
+    end
+    -- self.logger:debug(string.format("Player Fitness _start: %X", _start))
+    -- self.logger:debug(string.format("Player Fitness _end: %X", _end))
+    local current_addr = _start
+    local player_found = false
+    local _max = 2000
+    for i=1, _max do
+        if current_addr >= _end then
+            -- no player to edit
+            break
+        end
+        --self.logger:debug(string.format("Player Fitness current_addr: %X", current_addr))
+        local pid = readInteger(current_addr + PLAYERFITESS_STRUCT["pid"])
+        if pid == playerid then
+            player_found = true
+            break
+        end
+        current_addr = current_addr + PLAYERFITESS_STRUCT["size"]
+    end
+    if not player_found then
+        return 0
+    end
+    return current_addr
+end
+
+function thisFormManager:save_player_fitness(playerid, new_fitness, is_injured, injury_type, full_fit_on)
+    if not playerid then
+        self.logger:error("save_player_fitness no playerid!")
+        return
+    end
+    local current_addr = self:get_player_fitness_addr(playerid)
+    if current_addr == -1 then return end
+
+    -- Get first free
+    if current_addr == 0 then
+        current_addr = self:get_player_fitness_addr(4294967295)
+
+        if current_addr <= 0 then
+            self.logger:error("save_player_fitness no space")
+            return
+        end
+
+        writeInteger(current_addr + PLAYERFITESS_STRUCT["pid"], playerid)
+        writeInteger(current_addr + PLAYERFITESS_STRUCT["tid"], 4294967295)
+        writeInteger(current_addr + PLAYERFITESS_STRUCT["full_fit_date"], 20080101)
+        writeInteger(current_addr + PLAYERFITESS_STRUCT["unk_date"], 20080101)
+        writeBytes(current_addr + PLAYERFITESS_STRUCT["unk0"], 0)
+        writeBytes(current_addr + PLAYERFITESS_STRUCT["fitness"], 100)
+        writeBytes(current_addr + PLAYERFITESS_STRUCT["is_injured"], 0)
+        writeBytes(current_addr + PLAYERFITESS_STRUCT["unk1"], 0)
+        writeBytes(current_addr + PLAYERFITESS_STRUCT["inj_type"], 0)
+        writeBytes(current_addr + PLAYERFITESS_STRUCT["unk2"], 0)
+        writeBytes(current_addr + PLAYERFITESS_STRUCT["unk3"], 1)
+        writeBytes(current_addr + PLAYERFITESS_STRUCT["unk4"], 0)
+    end
+
+    if new_fitness then
+        if type(new_fitness) == "string" then
+            new_fitness, _ = string.gsub(
+                new_fitness,
+                '%D', ''
+            )
+
+            new_fitness = tonumber(new_fitness) -- remove non-digits
+        end
+
+        if new_fitness > 100 then
+            new_fitness = 100
+        elseif new_fitness <= 1 then
+            new_fitness = 2
+        end
+        writeBytes(current_addr + PLAYERFITESS_STRUCT["fitness"], new_fitness)
+    end
+
+    if is_injured ~= nil and injury_type ~= nil and full_fit_on ~= nil then
+        is_injured = is_injured == 1
+        full_fit_on = date_to_value(full_fit_on)
+
+        if injury_type > 35 then injury_type = 35 end
+
+        if is_injured and injury_type > 0 and full_fit_on then
+            writeInteger(current_addr + PLAYERFITESS_STRUCT["full_fit_date"], full_fit_on)
+            writeInteger(current_addr + PLAYERFITESS_STRUCT["unk_date"], full_fit_on)
+            writeBytes(current_addr + PLAYERFITESS_STRUCT["unk0"], 0)
+            writeBytes(current_addr + PLAYERFITESS_STRUCT["is_injured"], 1)
+            writeBytes(current_addr + PLAYERFITESS_STRUCT["unk1"], 17)
+            writeBytes(current_addr + PLAYERFITESS_STRUCT["inj_type"], injury_type)
+            writeBytes(current_addr + PLAYERFITESS_STRUCT["unk2"], 2)
+            writeBytes(current_addr + PLAYERFITESS_STRUCT["unk3"], 1)
+            writeBytes(current_addr + PLAYERFITESS_STRUCT["unk4"], 0)
+        else
+            writeInteger(current_addr + PLAYERFITESS_STRUCT["full_fit_date"], 20080101)
+            writeInteger(current_addr + PLAYERFITESS_STRUCT["unk_date"], 20080101)
+            writeBytes(current_addr + PLAYERFITESS_STRUCT["unk0"], 0)
+            writeBytes(current_addr + PLAYERFITESS_STRUCT["is_injured"], 0)
+            writeBytes(current_addr + PLAYERFITESS_STRUCT["unk1"], 0)
+            writeBytes(current_addr + PLAYERFITESS_STRUCT["inj_type"], 0)
+            writeBytes(current_addr + PLAYERFITESS_STRUCT["unk2"], 0)
+            writeBytes(current_addr + PLAYERFITESS_STRUCT["unk3"], 1)
+            writeBytes(current_addr + PLAYERFITESS_STRUCT["unk4"], 0)
+        end
+    end
+end
+
+function thisFormManager:load_player_fitness(playerid)
+    local fn_comps_vis = function(visible)
+        self.frm.IsInjuredCB.Visible = visible
+        self.frm.InjuredLabel.Visible = visible
+        self.frm.InjuryCB.Visible = visible
+        self.frm.InjuryLabel.Visible = visible
+        self.frm.DurabilityEdit.Visible = visible
+        self.frm.DurabilityLabel.Visible = visible
+        self.frm.FullFitDateEdit.Visible = visible
+        self.frm.FullFitDateLabel.Visible = visible
+    end
+
+    if not playerid then
+        fn_comps_vis(false)
+        return
+    end
+
+    local current_addr = self:get_player_fitness_addr(playerid)
+    if current_addr == -1 then
+        fn_comps_vis(false)
+        return
+    elseif current_addr == 0 then
+        self.frm.IsInjuredCB.Visible = true
+        self.frm.InjuredLabel.Visible = true
+        self.frm.IsInjuredCB.ItemIndex = 0
+        self.frm.InjuryCB.ItemIndex = 0
+        self.frm.FullFitDateEdit.Text = "01/01/2008"
+        self.frm.DurabilityEdit.Text = "100%"
+        self.frm.InjuryLabel.Visible = false
+        self.frm.InjuryCB.Visible = false
+        self.frm.FullFitDateLabel.Visible = false
+        self.frm.FullFitDateEdit.Visible = false
+        return
+    end
+    fn_comps_vis(true)
+    
+    self.logger:debug(string.format("Player Fitness found at %X", current_addr))
+
+    local is_injured = readBytes(current_addr + PLAYERFITESS_STRUCT["is_injured"], 1)
+    self.frm.IsInjuredCB.ItemIndex = is_injured
+
+    local durability = readBytes(current_addr + PLAYERFITESS_STRUCT["fitness"], 1)
+    self.frm.DurabilityEdit.Text = string.format("%d", durability) .. "%"
+
+    if self.frm.IsInjuredCB.ItemIndex == 0 then
+        self.frm.InjuryCB.ItemIndex = 0
+        self.frm.FullFitDateEdit.Text = "01/01/2008"
+        self.frm.InjuryLabel.Visible = false
+        self.frm.InjuryCB.Visible = false
+        self.frm.FullFitDateLabel.Visible = false
+        self.frm.FullFitDateEdit.Visible = false
+    else
+        self.frm.InjuryLabel.Visible = true
+        self.frm.InjuryCB.Visible = true
+        self.frm.FullFitDateLabel.Visible = true
+        self.frm.FullFitDateEdit.Visible = true
+        local injury_type = readBytes(current_addr + PLAYERFITESS_STRUCT["inj_type"], 1)
+        self.frm.InjuryCB.ItemIndex = injury_type
+
+        self.frm.FullFitDateEdit.Text = value_to_date(
+            readInteger(current_addr + PLAYERFITESS_STRUCT["full_fit_date"])
+        )
+    end
+    self.frm.IsInjuredCB.Hint = self.frm.IsInjuredCB.Items[self.frm.IsInjuredCB.ItemIndex]
+end
+
+function thisFormManager:get_player_form_addr(playerid)
+    local form_ptr = self.memory_manager:read_multilevel_pointer(
+        readPointer("pScriptsBase"),
+        {0x0, 0x518, 0x0, 0x20, 0x130, 0x140}
+    ) + 0x2C
+    local n_of_players = readInteger(form_ptr - 0x4)
+
+    local size_of =  PLAYERFORM_STRUCT['size']
+    local _start = form_ptr
+    local _end = _start + (n_of_players*size_of)
+    if (not _start) or (not _end) then
+        self.logger:info("No form start or end")
+        return 0
+    end
+    local current_addr = _start
+    local player_found = false
+
+    for i=0, n_of_players, 1 do
+        if current_addr >= _end then
+            -- no player to edit
+            break
+        end
+        local pid = readInteger(current_addr + PLAYERFORM_STRUCT['pid'])
+        if pid == playerid then
+            player_found = true
+            break
+        end
+        current_addr = current_addr + PLAYERFORM_STRUCT["size"]
+    end
+    if not player_found then
+        -- self.logger:debug("player form not found")
+        return 0
+    end
+    return current_addr
+end
+
+function thisFormManager:save_player_form(playerid, new_value)
+    if not playerid then
+        self.logger:error("save_player_form no playerid!")
+        return
+    end
+    self.logger:debug(string.format("save_player_form: %d", playerid))
+    local current_addr = self:get_player_form_addr(playerid)
+    if current_addr == 0 then
+        return
+    end
+
+    if not new_value or new_value < 1 then
+        self.logger:warning(string.format("Invalid player form! %d - %d", new_value, playerid))
+        new_value = 1
+    elseif new_value > 5 then
+        self.logger:warning(string.format("Invalid player form! %d - %d", new_value, playerid))
+        new_value = 5
+    end
+
+    -- Arrow
+    writeInteger(current_addr+PLAYERFORM_STRUCT['form'], new_value)
+
+    -- avg. needed for arrow?
+    local form_vals = {
+        25, 50, 65, 75, 90
+    }
+    local form_val = form_vals[new_value]
+
+    -- Last 10 games?
+    for i=0, 9 do
+        local off = PLAYERFORM_STRUCT['last_games_avg_1'] + (i * 4)
+        writeInteger(current_addr+off, form_val)
+    end
+
+    -- Avg from last 10 games?
+    writeInteger(current_addr+PLAYERFORM_STRUCT['recent_avg'], form_val)
+end
+
+function thisFormManager:load_player_form(playerid)
+    local fn_comps_vis = function(visible)
+        self.frm.FormCB.Visible = visible
+        self.frm.FormLabel.Visible = visible
+    end
+    self.logger:debug("load_player_form")
+
+    if not playerid then
+        fn_comps_vis(false)
+        return
+    end
+
+    local current_addr = self:get_player_form_addr(playerid)
+    if current_addr == 0 then
+        fn_comps_vis(false)
+        return
+    end
+
+    self.logger:debug(string.format("Player Form found at %X", current_addr))
+    fn_comps_vis(true)
+
+    local current_form = readInteger(current_addr + PLAYERFORM_STRUCT['form'])
+    if current_form < 1 then
+        self.logger:info(string.format("Invalid player form! %d - %d", current_form, playerid))
+        current_form = 1
+    elseif current_form > 5 then
+        self.logger:info(string.format("Invalid player form! %d - %d", current_form, playerid))
+        current_form = 5
+    end
+    self.frm.FormCB.ItemIndex = current_form - 1
+    self.frm.FormCB.Hint = self.frm.FormCB.Items[self.frm.FormCB.ItemIndex]
+end
+
+function thisFormManager:get_player_morale_addr(playerid)
+    local size_of = PLAYERMORALE_STRUCT['size']
+    local morale_ptr = self.memory_manager:read_multilevel_pointer(
+        readPointer("pScriptsBase"),
+        {0x0, 0x518, 0x0, 0x20, 0x168}
+    )
+
+    local _start = readPointer(morale_ptr + 0x4B0)
+    local _end = readPointer(morale_ptr + 0x4B8)
+    if (not _start) or (not _end) then
+        self.logger:info("No Morale start or end")
+        return
+    end
+    local squad_size = ((_end - _start) // size_of) + 1
+    local current_addr = _start
+    local player_found = false
+    for i=0, squad_size, 1 do
+        if current_addr >= _end then
+            -- no player to edit
+            break
+        end
+        local pid = readInteger(current_addr + PLAYERMORALE_STRUCT['pid'])
+        if pid == playerid then
+            player_found = true
+            break
+        end
+        current_addr = current_addr + PLAYERMORALE_STRUCT['size']
+    end
+    if not player_found then
+        return 0
+    end
+
+    return current_addr
+end
+
+function thisFormManager:save_player_morale(playerid, new_value)
+    if not playerid then
+        self.logger:error("save_player_morale no playerid!")
+        return
+    end
+    self.logger:debug(string.format("save_player_morale: %d", playerid))
+    local current_addr = self:get_player_morale_addr(playerid)
+    if current_addr == 0 then
+        return
+    end
+
+    if not new_value or new_value < 1 then
+        self.logger:warning(string.format("Invalid player morale! %d - %d", new_value, playerid))
+        new_value = 1
+    elseif new_value > 5 then
+        self.logger:warning(string.format("Invalid player morale! %d - %d", new_value, playerid))
+        new_value = 5
+    end
+    local morale_vals = {
+        15, 40, 65, 75, 95
+    }
+
+    local morale = morale_vals[new_value]
+
+    -- Will it be enough?
+    writeInteger(current_addr+PLAYERMORALE_STRUCT['morale_val'], morale)
+    writeInteger(current_addr+PLAYERMORALE_STRUCT['contract'], morale)
+    writeInteger(current_addr+PLAYERMORALE_STRUCT['playtime'], morale)
+end
+
+function thisFormManager:load_player_morale(playerid)
+    local fn_comps_vis = function(visible)
+        self.frm.MoraleCB.Visible = visible
+        self.frm.MoraleLabel.Visible = visible
+    end
+
+    if not playerid then
+        fn_comps_vis(false)
+        return
+    end
+
+    local current_addr = self:get_player_morale_addr(playerid)
+    if current_addr == 0 then
+        fn_comps_vis(false)
+        return
+    end
+
+    self.logger:debug(string.format("Player Morale found at %X", current_addr))
+    fn_comps_vis(true)
+
+    local morale = readInteger(current_addr+PLAYERMORALE_STRUCT['morale_val'])
+
+    if morale <= 35 then
+        morale_level = 0    -- VERY_LOW
+    elseif morale <= 55 then
+        morale_level = 1    -- LOW
+    elseif morale <= 70 then
+        morale_level = 2    -- NORMAL
+    elseif morale <= 85 then
+        morale_level = 3    -- HIGH
+    else
+        morale_level = 4    -- VERY_HIGH
+    end
+    self.frm.MoraleCB.ItemIndex = morale_level
+    self.frm.MoraleCB.Hint = self.frm.MoraleCB.Items[self.frm.MoraleCB.ItemIndex]
+end
+
+function thisFormManager:get_player_sharpness_addr(playerid)
+    local fitness_manager_ptr = self.memory_manager:read_multilevel_pointer(
+        readPointer("pCareerModeSmth"),
+        {0x0, 0x10, 0x48, 0x30, 0x180+0x50}
+    )
+    local _start = readPointer(fitness_manager_ptr + 0x19F0)
+
+    if not _start then
+        self.logger:info("Player Sharpness, no start.")
+        return 0
+    end
+
+    -- 14542902F
+    local current_addr = _start
+    --self.logger:debug(string.format("load_player_sharpness, start %X", current_addr))
+    local _max = 26001
+    for i=1, _max do
+        if current_addr == 0 then break end
+        local pid = readInteger(current_addr + PLAYERSHARPNESS_STRUCT['pid'])
+        if not pid then
+            break
+        end
+        if pid == playerid then
+            player_found = true
+            break
+        end
+        if pid < playerid then
+            current_addr = readPointer(current_addr)
+        else
+            current_addr = readPointer(current_addr+8)
+        end
+    end
+    if not player_found or current_addr == 0 then
+        self.logger:debug("Player Sharpness, player not found.")
+        return 0
+    end
+    return current_addr
+end
+
+function thisFormManager:save_player_sharpness(playerid, new_value)
+    if not playerid then
+        self.logger:error("save_player_sharpness no playerid!")
+        return
+    end
+
+    if new_value then
+        if type(new_value) == "string" then
+            new_value, _ = string.gsub(
+                new_value,
+                '%D', ''
+            )
+
+            new_value = tonumber(new_value) -- remove non-digits
+        end
+    end
+
+    if new_value == nil then return end
+
+    if new_value < 0 then
+        new_value = 0
+    elseif new_value > 100 then
+        new_value = 100
+    end
+
+    local current_addr = self:get_player_sharpness_addr(playerid)
+    if current_addr == 0 then
+        return
+    end
+    writeBytes(current_addr + PLAYERSHARPNESS_STRUCT["sharpness"], new_value)
+
+end
+
+function thisFormManager:load_player_sharpness(playerid)
+    local fn_comps_vis = function(visible)
+        self.frm.SharpnessEdit.Visible = visible
+        self.frm.SharpnessLabel.Visible = visible
+    end
+    if not playerid then
+        fn_comps_vis(false)
+        return
+    end
+
+    local current_addr = self:get_player_sharpness_addr(playerid)
+    if current_addr == 0 then
+        fn_comps_vis(false)
+        return
+    end
+
+    fn_comps_vis(true)
+    self.logger:debug(string.format("Player Sharpness found at %X", current_addr))
+    local sharpness = readBytes(current_addr + PLAYERSHARPNESS_STRUCT["sharpness"], 1)
+    self.frm.SharpnessEdit.Text = sharpness
+end
+
+function thisFormManager:get_player_release_clause_addr(playerid)
+    local rlc_ptr = self.memory_manager:read_multilevel_pointer(
+        readPointer("pScriptsBase"),
+        {0x0, 0x518, 0x0, 0x20, 0xB8}
+    )
+    self.logger:debug(string.format("rlc_ptr: %X", rlc_ptr))
+    -- Start list = 0x160
+    -- end list = 0x168
+    local _start = readPointer(rlc_ptr + 0x160)
+    local _end = readPointer(rlc_ptr + 0x168)
+    if (not _start) or (not _end) then
+        self.logger:info("No Release Clauses start or end")
+        return -1
+    end
+
+    local current_addr = _start
+    local player_found = false
+    local _max = 26001
+    for i=1, _max do
+        if current_addr >= _end then
+            -- no player to edit
+            break
+        end
+        local pid = readInteger(current_addr + PLAYERRLC_STRUCT['pid'])
+        if pid == playerid then
+            player_found = true
+            break
+        end
+        current_addr = current_addr + PLAYERRLC_STRUCT['size']
+    end
+    if not player_found then
+        return 0
+    end
+    return current_addr
+end
+
+function thisFormManager:save_player_release_clause(playerid, teamid, new_value)
+    if not playerid then
+        self.logger:error("save_player_release_clause no playerid!")
+        return
+    end
+
+    if new_value then
+        if type(new_value) == "string" then
+            new_value, _ = string.gsub(
+                new_value,
+                '%D', ''
+            )
+
+            new_value = tonumber(new_value) -- remove non-digits
+        end
+    end
+
+    local current_addr = self:get_player_release_clause_addr(playerid)
+    -- No release clause pointer
+    if current_addr == -1 then return end
+
+    
+    if new_value == 0 then
+        -- Can't be 0
+        new_value = nil
+    elseif new_value and new_value > 2147483646 then
+        -- Max possible value
+        new_value = 2147483646
+    end
+
+    local add_clause = false
+    local remove_clause = false
+    if new_value == nil and current_addr == 0 then
+        -- No new value and player don't have release clause
+        return
+    elseif new_value == nil and current_addr > 0 then
+        -- Remove
+        remove_clause = true
+    elseif new_value and current_addr > 0 then
+        -- Edit
+        writeInteger(current_addr+PLAYERRLC_STRUCT["value"], new_value)
+        return
+    elseif new_value and current_addr == 0 then
+        -- Add
+        if not teamid then
+            self.logger:error("save_player_release_clause no teamid!")
+            return
+        end
+        add_clause = true
+    end
+
+    local rlc_ptr = self.memory_manager:read_multilevel_pointer(
+        readPointer("pScriptsBase"),
+        {0x0, 0x518, 0x0, 0x20, 0xB8}
+    )
+    local _start = readPointer(rlc_ptr + 0x160)
+    local _end = readPointer(rlc_ptr + 0x168)
+    if add_clause then
+        current_addr = _end
+        writeQword(rlc_ptr+0x168, current_addr+PLAYERRLC_STRUCT["size"])
+
+        writeInteger(current_addr+PLAYERRLC_STRUCT["pid"], playerid)
+        writeInteger(current_addr+PLAYERRLC_STRUCT["tid"], teamid)
+        writeInteger(current_addr+PLAYERRLC_STRUCT["value"], new_value)
+    elseif remove_clause then
+        local bytecount = _end - current_addr + PLAYERRLC_STRUCT['size']
+        local bytes = readBytes(current_addr+PLAYERRLC_STRUCT['size'], bytecount, true)
+        writeBytes(current_addr, bytes)
+        writeQword(rlc_ptr+0x168, _end-PLAYERRLC_STRUCT["size"])
+    end
+end
+
+function thisFormManager:load_player_release_clause(playerid)
+    local fn_comps_vis = function(visible)
+        self.frm.ReleaseClauseEdit.Visible = visible
+        self.frm.ReleaseClauseLabel.Visible = visible
+    end
+
+    if not playerid then
+        fn_comps_vis(false)
+        return
+    end
+
+    local current_addr = self:get_player_release_clause_addr(playerid)
+    if current_addr == -1 then
+        fn_comps_vis(false)
+        return
+    elseif current_addr == 0 then
+        fn_comps_vis(true)
+        self.frm.ReleaseClauseEdit.Text = "None"
+        return
+    end
+
+    self.logger:debug(string.format("Player Release Clause found at %X", current_addr))
+    local release_clause_value = readInteger(current_addr + PLAYERRLC_STRUCT['value'])
+    self.frm.ReleaseClauseEdit.Text = release_clause_value
+end
+
+function thisFormManager:get_squad_role_addr(playerid)
+    local squad_role_ptr = self.memory_manager:read_multilevel_pointer(
+        readPointer("pCareerModeSmth"),
+        {0x0, 0x10, 0x48, 0x30, 0x180+0x48}
+    )
+    -- teamid = squad_role_ptr + 18
+    -- squad_role_ptr + 18 +0x8 Start list
+    -- squad_role_ptr + 18 +x10 End List
+    -- us002
+
+    local _start = readPointer(squad_role_ptr + 0x20)
+    local _end = readPointer(squad_role_ptr + 0x28)
+    if (not _start) or (not _end) then
+        self.logger:info("No Player Role start or end")
+        return 0
+    end
+    --self.logger:debug(string.format("Player Role _start: %X", _start))
+    --self.logger:debug(string.format("Player Role _end: %X", _end))
+    local _max = 55
+    local current_addr = _start
+    local player_found = false
+    for i=1, _max do
+        if current_addr >= _end then
+            -- no player to edit
+            break
+        end
+        --self.logger:debug(string.format("Player Role current_addr: %X", current_addr))
+        local pid = readInteger(current_addr + PLAYERROLE_STRUCT["pid"])
+        --local role = readInteger(current_addr + PLAYERROLE_STRUCT["role"])
+        --self.logger:debug(string.format("Player Role PID: %d, Role: %d", pid, role))
+        if pid == playerid then
+            player_found = true
+            break
+        end
+        current_addr = current_addr + PLAYERROLE_STRUCT["size"]
+    end
+    if not player_found then
+        return 0
+    end
+    return current_addr
+end
+
+function thisFormManager:save_player_contract(playerid, wage, squadrole, performance_bonus_type, performance_bonus_count, performance_bonus_value, loan_wage_split)
+    if not playerid then
+        self.logger:error("save_player_contract no playerid!")
+        return
+    end
+    local table_name = "career_playercontract"
+    local arr_flds = {
+        {
+            name = "playerid",
+            expr = "eq",
+            values = {playerid}
+        }
+    }
+
+    local addr = self.game_db_manager:find_record_addr(
+        table_name, arr_flds, 1 
+    )
+
+    -- No contract record
+    if #addr <= 0 then
+        return 
+    end
+    local playercontract_addr = addr[1]
+
+    if squadrole ~= nil then
+        local current_addr = self:get_squad_role_addr(playerid)
+        if current_addr > 0 then
+            writeInteger(current_addr + PLAYERROLE_STRUCT["role"], squadrole + 1)
+        end
+        self.game_db_manager:set_table_record_field_value(playercontract_addr, table_name, "playerrole", squadrole+1)
+    end
+
+    if wage then
+        if type(wage) == "string" then
+            wage, _ = string.gsub(
+                wage,
+                '%D', ''
+            )
+
+            wage = tonumber(wage) -- remove non-digits
+        end
+        self.game_db_manager:set_table_record_field_value(playercontract_addr, table_name, "wage", wage)
+    end
+    if loan_wage_split then
+        if type(loan_wage_split) == "string" then
+            loan_wage_split, _ = string.gsub(
+                loan_wage_split,
+                '%D', ''
+            )
+
+            loan_wage_split = tonumber(loan_wage_split) -- remove non-digits
+        end
+        self.game_db_manager:set_table_record_field_value(playercontract_addr, table_name, "loan_wage_split", loan_wage_split)
+    end
+
+    if performance_bonus_type then
+        self.game_db_manager:set_table_record_field_value(playercontract_addr, table_name, "performancebonustype", performance_bonus_type)
+        if performance_bonus_type == 0 then
+            self.game_db_manager:set_table_record_field_value(playercontract_addr, table_name, "performancebonusvalue", -1)
+            self.game_db_manager:set_table_record_field_value(playercontract_addr, table_name, "performancebonuscount", -1)
+            self.game_db_manager:set_table_record_field_value(playercontract_addr, table_name, "performancebonuscountachieved", 0)
+        else
+            if performance_bonus_value == nil then performance_bonus_value = 1 end
+            if type(performance_bonus_value) == "string" then
+                performance_bonus_value, _ = string.gsub(
+                    performance_bonus_value,
+                    '%D', ''
+                )
+    
+                performance_bonus_value = tonumber(performance_bonus_value) -- remove non-digits
+            end
+            self.game_db_manager:set_table_record_field_value(playercontract_addr, table_name, "performancebonusvalue", performance_bonus_value)
+            local bonus = split(performance_bonus_count, '/')
+            local current = tonumber(bonus[1])
+            local max = tonumber(bonus[2])
+            if current and max then
+                local is_achieved = 0
+                if max == current then
+                    is_achieved = 1
+                end
+                self.game_db_manager:set_table_record_field_value(playercontract_addr, table_name, "isperformancebonusachieved", is_achieved)
+                self.game_db_manager:set_table_record_field_value(playercontract_addr, table_name, "performancebonuscount", max)
+                self.game_db_manager:set_table_record_field_value(playercontract_addr, table_name, "performancebonuscountachieved", current)
+            else
+                self.game_db_manager:set_table_record_field_value(playercontract_addr, table_name, "isperformancebonusachieved", 0)
+                self.game_db_manager:set_table_record_field_value(playercontract_addr, table_name, "performancebonuscount", 26)
+                self.game_db_manager:set_table_record_field_value(playercontract_addr, table_name, "performancebonuscountachieved", 1)
+            end
+        end
+    end
+
+
+end
+
+function thisFormManager:load_player_contract(playerid, is_in_user_club)
+    local fn_comps_vis = function(visible)
+        self.frm.WageLabel.Visible = visible
+        self.frm.WageEdit.Visible = visible
+        self.frm.SquadRoleLabel.Visible = visible
+        self.frm.SquadRoleCB.Visible = visible
+        self.frm.LoanWageSplitLabel.Visible = visible
+        self.frm.LoanWageSplitEdit.Visible = visible
+        self.frm.PerformanceBonusTypeLabel.Visible = visible
+        self.frm.PerformanceBonusTypeCB.Visible = visible
+        self.frm.PerformanceBonusCountLabel.Visible = visible
+        self.frm.PerformanceBonusCountEdit.Visible = visible
+        self.frm.PerformanceBonusValueLabel.Visible = visible
+        self.frm.PerformanceBonusValueEdit.Visible = visible
+    end
+
+    if (
+        not playerid or
+        not is_in_user_club
+    ) then
+        fn_comps_vis(false)
+        return 
+    end
+
+    local arr_flds = {
+        {
+            name = "playerid",
+            expr = "eq",
+            values = {playerid}
+        }
+    }
+
+    local addr = self.game_db_manager:find_record_addr(
+        "career_playercontract", arr_flds, 1 
+    )
+
+    -- No contract record
+    if #addr <= 0 then
+        fn_comps_vis(false)
+        return 
+    end
+    local playercontract_addr = addr[1]
+    local playerrole = self.game_db_manager:get_table_record_field_value(playercontract_addr, "career_playercontract", "playerrole")
+    if playerrole == -1 then
+        local current_addr = self:get_squad_role_addr(playerid)
+        if current_addr > 0 then
+            local role = readInteger(current_addr + PLAYERROLE_STRUCT["role"])
+            self.frm.SquadRoleCB.ItemIndex = role - 1
+            self.frm.SquadRoleCB.Hint = self.frm.SquadRoleCB.Items[self.frm.SquadRoleCB.ItemIndex]
+        end
+    else
+        self.frm.SquadRoleCB.ItemIndex = playerrole - 1
+        self.frm.SquadRoleCB.Hint = self.frm.SquadRoleCB.Items[self.frm.SquadRoleCB.ItemIndex]
+    end
+    fn_comps_vis(true)
+
+    local wage = self.game_db_manager:get_table_record_field_value(playercontract_addr, "career_playercontract", "wage")
+    self.frm.WageEdit.Text = wage
+
+    local loan_wage_split = self.game_db_manager:get_table_record_field_value(playercontract_addr, "career_playercontract", "loan_wage_split")
+    if loan_wage_split == -1 then
+        self.frm.LoanWageSplitEdit.Text = "None"
+        self.frm.LoanWageSplitLabel.Visible = false
+        self.frm.LoanWageSplitEdit.Visible = false
+    else
+        self.frm.LoanWageSplitEdit.Text = string.format("%d", loan_wage_split) .. "%"
+    end
+
+    local performancebonustype = self.game_db_manager:get_table_record_field_value(playercontract_addr, "career_playercontract", "performancebonustype")
+    self.frm.PerformanceBonusTypeCB.Hint = self.frm.PerformanceBonusTypeCB.Items[self.frm.PerformanceBonusTypeCB.ItemIndex]
+    if performancebonustype == 0 then
+        self.frm.PerformanceBonusTypeCB.ItemIndex = 0
+        self.frm.PerformanceBonusCountEdit.Text = "0/25"
+        self.frm.PerformanceBonusValueEdit.Text = "0"
+
+        self.frm.PerformanceBonusCountLabel.Visible = false
+        self.frm.PerformanceBonusCountEdit.Visible = false
+        self.frm.PerformanceBonusValueLabel.Visible = false
+        self.frm.PerformanceBonusValueEdit.Visible = false
+    else
+        self.frm.PerformanceBonusTypeCB.ItemIndex = performancebonustype
+        local performancebonuscount = self.game_db_manager:get_table_record_field_value(playercontract_addr, "career_playercontract", "performancebonuscount")
+        if performancebonuscount == -1 then
+            self.frm.PerformanceBonusCountEdit.Text = "0/25"
+        else
+            local performancebonuscountachieved = self.game_db_manager:get_table_record_field_value(playercontract_addr, "career_playercontract", "performancebonuscountachieved")
+            self.frm.PerformanceBonusCountEdit.Text = string.format("%d/%d", performancebonuscountachieved, performancebonuscount)
+        end
+        local performancebonusvalue = self.game_db_manager:get_table_record_field_value(playercontract_addr, "career_playercontract", "performancebonusvalue")
+        self.frm.PerformanceBonusValueEdit.Text = performancebonusvalue
+    end
+
+end
+
 
 function thisFormManager:onApplyChangesBtnClick()
     self.logger:info("Apply Changes")
 
     self.logger:debug("Iterate change_list")
     for key, value in pairs(self.change_list) do
-        
         local comp_desc = self.form_components_description[key]
         local component = self.frm[key]
         local component_class = component.ClassName
@@ -2965,6 +4038,114 @@ function thisFormManager:onApplyChangesBtnClick()
                 )
             end
         end
+    end
+
+    local is_in_cm = is_cm_loaded()
+
+    local is_manager_career = false
+    local is_manager_career_valid = false
+    if is_in_cm then
+        is_manager_career = self:is_manager_career(self.current_addrs["career_users"])
+        if type(is_manager_career) == "boolean" then
+            is_manager_career_valid = true
+        end
+    end
+    if is_in_cm and is_manager_career_valid then
+        local playerid = tonumber(self.frm.PlayerIDEdit.Text)
+        local teamid = tonumber(self.frm.TeamIDEdit.Text)
+        if self.change_list["FormCB"] then
+            self:save_player_form(playerid, self.frm.FormCB.ItemIndex+1)
+        end
+        if self.change_list["MoraleCB"] then
+            self:save_player_morale(playerid, self.frm.MoraleCB.ItemIndex+1)
+        end
+        if self.change_list["ReleaseClauseEdit"] then
+            self:save_player_release_clause(playerid, teamid, self.frm.ReleaseClauseEdit.Text)
+        end
+        if self.change_list["SharpnessEdit"] then
+            self:save_player_sharpness(playerid, self.frm.SharpnessEdit.Text)
+        end
+
+        if (
+            self.change_list["WageEdit"] or 
+            self.change_list["LoanWageSplitEdit"] or 
+            self.change_list["SquadRoleCB"] or 
+            self.change_list["PerformanceBonusTypeCB"] or 
+            self.change_list["PerformanceBonusCountEdit"] or 
+            self.change_list["PerformanceBonusValueEdit"]
+        ) then
+            local new_wage = nil
+            if self.change_list["WageEdit"] and self.frm.WageEdit.Visible then
+                new_wage = self.frm.WageEdit.Text
+            end
+            local new_squadrole = nil
+            if self.change_list["SquadRoleCB"] and self.frm.SquadRoleCB.Visible then
+                new_squadrole = self.frm.SquadRoleCB.ItemIndex
+            end
+            local new_performance_bonus_type = nil
+            if self.frm.PerformanceBonusTypeCB.Visible then
+                new_performance_bonus_type = self.frm.PerformanceBonusTypeCB.ItemIndex
+            end
+            local new_performance_count = nil
+            if self.frm.PerformanceBonusCountEdit.Visible then
+                new_performance_count = self.frm.PerformanceBonusCountEdit.Text
+            end
+            local new_performance_value = nil
+            if self.frm.PerformanceBonusValueEdit.Visible then
+                new_performance_value = self.frm.PerformanceBonusValueEdit.Text
+            end
+            local new_loan_wage_split = nil
+            if self.change_list["LoanWageSplitEdit"] and self.frm.LoanWageSplitEdit.Visible then
+                new_loan_wage_split = self.frm.LoanWageSplitEdit.Text
+            end
+
+            self:save_player_contract(
+                playerid,
+                new_wage,
+                new_squadrole,
+                new_performance_bonus_type,
+                new_performance_count,
+                new_performance_value,
+                new_loan_wage_split
+            )
+        end
+
+        if (
+            self.change_list["IsInjuredCB"] or
+            self.change_list["InjuryCB"] or
+            self.change_list["DurabilityEdit"] or
+            self.change_list["FullFitDateEdit"]
+        ) then
+            local new_durability = nil
+            if self.frm.DurabilityEdit.Visible then
+                new_durability = self.frm.DurabilityEdit.Text
+            end
+
+            local new_isinjured = nil
+            if self.frm.IsInjuredCB.Visible then
+                new_isinjured = self.frm.IsInjuredCB.ItemIndex
+            end
+
+            local new_injury = nil
+            if self.frm.InjuryCB.Visible then
+                new_injury = self.frm.InjuryCB.ItemIndex
+            end
+
+            local new_fullfit = nil
+            if self.frm.FullFitDateEdit.Visible then
+                new_fullfit = self.frm.FullFitDateEdit.Text
+            end
+
+            self:save_player_fitness(
+                playerid,
+                new_durability,
+                new_isinjured,
+                new_injury,
+                new_fullfit
+            )
+        end
+
+
     end
 
     self.has_unsaved_changes = false

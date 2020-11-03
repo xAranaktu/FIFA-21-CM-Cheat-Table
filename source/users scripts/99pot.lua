@@ -13,6 +13,7 @@
 -- This script will change:
 -- Potential to 99
 
+gCTManager:init_ptrs()
 local game_db_manager = gCTManager.game_db_manager
 local memory_manager = gCTManager.memory_manager
 

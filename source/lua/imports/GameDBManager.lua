@@ -69,7 +69,15 @@ function GameDBManager:add_table(table_name, pointer, first_record_write_to_arr)
     if first_record_write_to_arr then
         -- self.logger:debug(string.format("%s first record: %X", table_name, table_data["first_record"]))
         for i=1, #first_record_write_to_arr do
-            writeQword(first_record_write_to_arr[i], table_data["first_record"])
+            if i == 1 then
+                local current = readPointer(first_record_write_to_arr[i])
+                if current == 0 then
+                    -- Overwrite current record address only if it's 0
+                    writeQword(first_record_write_to_arr[i], table_data["first_record"])
+                end
+            else
+                writeQword(first_record_write_to_arr[i], table_data["first_record"])
+            end
         end
     end
 end
@@ -140,7 +148,18 @@ function GameDBManager:get_table_record_field_value(record_addr, table_name, fie
         assert(false, critical_error)
     end
 
-    --self.logger:info(string.format("get_table_record_field_value: 0x%X: %s %s", record_addr or 0, table_name or "", fieldname or ""))
+    if not DB_TABLES_META_MAP[table_name] then
+        self.logger:error(string.format("get_table_record_field_value. %s Table not mapped", table_name))
+    end
+
+    if not DB_TABLES_META_MAP[table_name][fieldname] then
+        self.logger:error(string.format("get_table_record_field_value. field %s in %s Table not mapped", fieldname, table_name))
+    end
+
+    if not DB_TABLES_META[table_name] then
+        self.logger:error(string.format("get_table_record_field_value. %s no meta", table_name))
+    end
+
     local meta_idx = DB_TABLES_META_MAP[table_name][fieldname]
     local fld_desc = DB_TABLES_META[table_name][meta_idx]
 

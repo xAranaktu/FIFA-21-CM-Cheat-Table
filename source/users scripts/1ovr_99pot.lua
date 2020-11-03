@@ -15,6 +15,7 @@
 -- Ovr to 1
 -- All Attributess to 1
 
+gCTManager:init_ptrs()
 local game_db_manager = gCTManager.game_db_manager
 local memory_manager = gCTManager.memory_manager
 

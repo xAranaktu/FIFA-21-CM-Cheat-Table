@@ -14,7 +14,7 @@
 -- CHECK FAQ IF YOU DON"T KNOW WHAT MODIFER IS
 -- https://github.com/xAranaktu/FIFA-21-CM-Cheat-Table/wiki/Frequently-asked-questions
 
-
+gCTManager:init_ptrs()
 local game_db_manager = gCTManager.game_db_manager
 local memory_manager = gCTManager.memory_manager
 

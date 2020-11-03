@@ -1,9 +1,11 @@
+FIFA = 21
 DEFAULT_PROC_NAME = "FIFA21.exe"
 
 URL_LINKS = {
     PATREON = "https://www.patreon.com/xAranaktu",
     DISCORD = "https://discord.gg/va9EtdB",
-    VERSION = "https://raw.githubusercontent.com/xAranaktu/FIFA-21-CM-Cheat-Table/master/VERSION"
+    VERSION = "https://raw.githubusercontent.com/xAranaktu/FIFA-21-CM-Cheat-Table/master/VERSION",
+    CDN = "https://fifatracker-cdn.fra1.digitaloceanspaces.com"
 }
 
 CT_MEMORY_RECORDS = {
@@ -24,9 +26,11 @@ CT_MEMORY_RECORDS = {
 }
 
 AOB_PATTERNS = {
+    pScriptsBase = '48 89 35 ?? ?? ?? ?? 48 89 3D ?? ?? ?? ?? 48 89 0D ?? ?? ?? ??',
+    pCareerModeSmth = '48 89 35 ?? ?? ?? ?? 41 B8 01 00 00 00 48 8D 15',
+
     DisablePGM = "85 C0 0F 95 85 60 05 00 00",
     PGMApplyXp = "F3 0F 2C C1 48 8B 8D A0 00 00 00",
-
     ScreenID = '48 8D 35 ?? ?? ?? ?? 48 0F 45 35 ?? ?? ?? ?? 49 8B FF',
     DatabaseRead = '48 ?? ?? 4C 03 46 30 E8',
     DatabaseBasePtr = "4C 0F 44 35 ?? ?? ?? ?? 41 8B 4E 08",
@@ -39,7 +43,6 @@ AOB_PATTERNS = {
     ChangeStadium = "45 8B AC 24 C4 18 00 00",
     MatchHalfLength = '44 8B 83 E8 18 00 00',
     UnlimitedSubstitutions = "8B 84 01 EC 9B 00 00",
-    pScriptsBase = '48 89 35 ?? ?? ?? ?? 48 89 3D ?? ?? ?? ?? 48 89 0D ?? ?? ?? ??',
     fnGenYAReport = '48 33 C4 48 89 45 40 48 8B F9 48 8B 01 FF',    -- -0x2B
     GenNewYAReport = '41 8D 44 24 0E',
     InterceptpScoutManager = '48 8B 0C 03 48 8B 01 FF 50 20',
@@ -131,6 +134,41 @@ DB_TABLE_STRUCT_OFFSETS = {
 }
 
 DB_TABLES_META_MAP = {
+    career_users = {
+        userid = 1,
+        sponsorid = 2,
+        leagueseasonmessagesent = 3,
+        firstname = 4,
+        surname = 5,
+        agentname = 6,
+        playertype = 7,
+        nationalteamid = 8,
+        usertype = 9,
+        clubteamid = 10,
+        leagueid = 11,
+        wage = 12,
+        seasoncount = 13,
+        goalnews = 14,
+        nationalityid = 15,
+        primarycompobjid = 16
+    },
+    career_playercontract = {
+        playerid = 1,
+        teamid = 2,
+        loan_wage_split = 3,
+        performancebonuscountachieved = 4,
+        contract_date = 5,
+        signon_bonus = 6,
+        contract_status = 7,
+        performancebonuscount = 8,
+        playerrole = 9,
+        wage = 10,
+        performancebonustype = 11,
+        duration_months = 12,
+        performancebonusvalue = 13,
+        isperformancebonusachieved = 14,
+        last_status_change_date = 15
+    },
     default_teamsheets = {
         teamid = 1,
         customsub1in = 2,
@@ -509,6 +547,322 @@ DB_TABLES_META_MAP = {
 
 
 DB_TABLES_META = {
+    career_users = {
+        {
+            name = "userid",
+            shortname = "uipx",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 7,
+            offset = 0x6F,
+            rangehigh = 63,
+            rangelow = -1,
+            startbit = 2,
+            key = true,
+        },
+        {
+            name = "sponsorid",
+            shortname = "AEUQ",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 5,
+            offset = 0x64,
+            rangehigh = 30,
+            rangelow = -1,
+            startbit = 6,
+        },
+        {
+            name = "leagueseasonmessagesent",
+            shortname = "BneM",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 9,
+            offset = 0x63,
+            rangehigh = 256,
+            rangelow = 0,
+            startbit = 5,
+        },
+        {
+            name = "firstname",
+            shortname = "HdeP",
+            fld_type = "DBOFIELDTYPE_STRING",
+            depth = 256,
+            offset = 0x0,
+            rangehigh = 0,
+            rangelow = 0,
+            startbit = 0,
+        },
+        {
+            name = "surname",
+            shortname = "rREd",
+            fld_type = "DBOFIELDTYPE_STRING",
+            depth = 256,
+            offset = 0x20,
+            rangehigh = 0,
+            rangelow = 0,
+            startbit = 0,
+        },
+        {
+            name = "agentname",
+            shortname = "zvSh",
+            fld_type = "DBOFIELDTYPE_STRING",
+            depth = 256,
+            offset = 0x40,
+            rangehigh = 0,
+            rangelow = 0,
+            startbit = 0,
+        },
+        {
+            name = "playertype",
+            shortname = "GzsD",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 2,
+            offset = 0x61,
+            rangehigh = 2,
+            rangelow = -1,
+            startbit = 1,
+        },
+        {
+            name = "nationalteamid",
+            shortname = "daeI",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 18,
+            offset = 0x61,
+            rangehigh = 200000,
+            rangelow = -1,
+            startbit = 3,
+        },
+        {
+            name = "usertype",
+            shortname = "Hwev",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 3,
+            offset = 0x6E,
+            rangehigh = 3,
+            rangelow = -1,
+            startbit = 7,
+        },
+        {
+            name = "clubteamid",
+            shortname = "NTyS",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 18,
+            offset = 0x66,
+            rangehigh = 200000,
+            rangelow = -1,
+            startbit = 7,
+        },
+        {
+            name = "leagueid",
+            shortname = "aQrQ",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 12,
+            offset = 0x65,
+            rangehigh = 3000,
+            rangelow = -1,
+            startbit = 3,
+        },
+        {
+            name = "wage",
+            shortname = "cmGX",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 31,
+            offset = 0x69,
+            rangehigh = 2147483520,
+            rangelow = 0,
+            startbit = 1,
+        },
+        {
+            name = "seasoncount",
+            shortname = "CXJt",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 4,
+            offset = 0x6E,
+            rangehigh = 15,
+            rangelow = 0,
+            startbit = 3,
+        },
+        {
+            name = "goalnews",
+            shortname = "MEjD",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 1,
+            offset = 0x61,
+            rangehigh = 1,
+            rangelow = 0,
+            startbit = 0,
+        },
+        {
+            name = "nationalityid",
+            shortname = "NGIq",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 8,
+            offset = 0x60,
+            rangehigh = 255,
+            rangelow = 0,
+            startbit = 0,
+        },
+        {
+            name = "primarycompobjid",
+            shortname = "XGBd",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 11,
+            offset = 0x6D,
+            rangehigh = 2000,
+            rangelow = 0,
+            startbit = 0,
+        }
+    },
+    career_playercontract = {
+        {
+            name = "playerid",
+            shortname = "ykFq",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 19,
+            offset = 0x12,
+            rangehigh = 300000,
+            rangelow = 0,
+            startbit = 5,
+            key = true,
+        },
+        {
+            name = "teamid",
+            shortname = "mCXg",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 18,
+            offset = 0xB,
+            rangehigh = 200000,
+            rangelow = 1,
+            startbit = 5,
+        },
+        {
+            name = "loan_wage_split",
+            shortname = "qjYv",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 7,
+            offset = 0x15,
+            rangehigh = 100,
+            rangelow = -1,
+            startbit = 0,
+        },
+        {
+            name = "performancebonuscountachieved",
+            shortname = "IdMw",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 10,
+            offset = 0x15,
+            rangehigh = 1000,
+            rangelow = -1,
+            startbit = 7,
+        },
+        {
+            name = "contract_date",
+            shortname = "Qssj",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 19,
+            offset = 0x10,
+            rangehigh = 20601231,
+            rangelow = 20080101,
+            startbit = 2,
+        },
+        {
+            name = "signon_bonus",
+            shortname = "hbrw",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 31,
+            offset = 0x17,
+            rangehigh = 2147483520,
+            rangelow = 0,
+            startbit = 1,
+        },
+        {
+            name = "contract_status",
+            shortname = "iNUH",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 4,
+            offset = 0x1,
+            rangehigh = 12,
+            rangelow = 0,
+            startbit = 1,
+        },
+        {
+            name = "performancebonuscount",
+            shortname = "AinI",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 10,
+            offset = 0x1,
+            rangehigh = 1000,
+            rangelow = -1,
+            startbit = 5,
+        },
+        {
+            name = "playerrole",
+            shortname = "NclQ",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 3,
+            offset = 0x2,
+            rangehigh = 5,
+            rangelow = -1,
+            startbit = 7,
+        },
+        {
+            name = "wage",
+            shortname = "cmGX",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 31,
+            offset = 0x3,
+            rangehigh = 2147483520,
+            rangelow = 0,
+            startbit = 2,
+        },
+        {
+            name = "performancebonustype",
+            shortname = "dcdd",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 5,
+            offset = 0xB,
+            rangehigh = 31,
+            rangelow = 0,
+            startbit = 0,
+        },
+        {
+            name = "duration_months",
+            shortname = "aNxl",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 8,
+            offset = 0x0,
+            rangehigh = 180,
+            rangelow = -1,
+            startbit = 0,
+        },
+        {
+            name = "performancebonusvalue",
+            shortname = "gkLa",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 31,
+            offset = 0x7,
+            rangehigh = 2147483520,
+            rangelow = -1,
+            startbit = 1,
+        },
+        {
+            name = "isperformancebonusachieved",
+            shortname = "jtSA",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 1,
+            offset = 0x1,
+            rangehigh = 1,
+            rangelow = 0,
+            startbit = 0,
+        },
+        {
+            name = "last_status_change_date",
+            shortname = "EBrh",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 19,
+            offset = 0xD,
+            rangehigh = 20601231,
+            rangelow = 20080101,
+            startbit = 7,
+        },
+    },
     default_teamsheets = {
         {
             name = "teamid",
@@ -4151,6 +4505,44 @@ PLAYERMORALE_STRUCT = {
 PLAYERGROWTHSYSTEM_STRUCT = {
     size = 0x9C,
     pid = 0x0
+}
+
+PLAYERSHARPNESS_STRUCT = {
+    size = 0x28,
+    pid = 0x20,
+    sharpness = 0x24 -- 1 byte
+}
+
+PLAYERRLC_STRUCT = {
+    size = 0xC,
+    pid = 0x0,
+    tid = 0x4,
+    value = 0x8
+}
+
+
+-- us002
+PLAYERROLE_STRUCT = {
+    size = 0x8,
+    pid = 0x0,
+    role = 0x4
+}
+
+-- fm001
+PLAYERFITESS_STRUCT = {
+    size = 0x18,
+    pid = 0x0,
+    tid = 0x4, -- -1 (?!)
+    full_fit_date = 0x8,
+    unk_date = 0xC,
+    unk0 = 0x10,
+    fitness = 0x11,
+    is_injured = 0x12,
+    unk1 = 0x13,
+    inj_type = 0x14,
+    unk2 = 0x15, -- 3
+    unk3 = 0x16, -- 1
+    unk4 = 0x17, -- 0
 }
 
 -- All available forms

@@ -164,12 +164,12 @@ function TableManager:version_check()
     local ce_version = getCEVersion()
     self.logger:info(string.format('Cheat engine version: %f', ce_version))
 
-    if (ce_version ~= 6.81) then
-        self.logger:warning(
-            string.format('Recommended Cheat Engine version for this cheat table is 6.81\nCheat Engine %f may not work as expected', ce_version),
-            true
-        )
-    end
+    -- if (ce_version ~= 6.81) then
+    --     self.logger:warning(
+    --         string.format('Recommended Cheat Engine version for this cheat table is 6.81\nCheat Engine %f may not work as expected', ce_version),
+    --         true
+    --     )
+    -- end
     self:get_frm("main_form").LabelCEVer.Caption = ce_version
 
     local ct_ver = self:get_ct_ver()
@@ -197,11 +197,16 @@ end
 function TableManager:setup_forms()
     local forms_map = self:get_forms_map()
 
-    settingsFormManager.dirs = deepcopy(self.dirs)
+    local dirs_cpy = deepcopy(self.dirs)
+
+    mainFormManager.dirs = dirs_cpy 
+
+    settingsFormManager.dirs = dirs_cpy
     settingsFormManager.fnSaveCfg = function(cfg)
         self:save_cfg(cfg)
     end
 
+    playersEditorFormManager.dirs = dirs_cpy
     playersEditorFormManager.game_db_manager = self.game_db_manager
     playersEditorFormManager.memory_manager = self.memory_manager
 
@@ -330,16 +335,12 @@ function TableManager:init_ptrs()
     self.logger:debug(string.format("DB_Three_Tables_ptr %X", DB_Three_Tables_ptr))
 
     -- Bruteforce
-    -- local one = 0xA84D0130
-    -- local two = 0x9F6D00F0
-    -- local three = 0x9F7801E0
+    -- local base_ptr = gCTManager.memory_manager:get_validated_resolved_ptr("DatabaseBasePtr", 4)
+    -- local one = gCTManager.memory_manager:read_multilevel_pointer(readPointer(base_ptr), {0x10, 0x390})
+    -- local two = gCTManager.memory_manager:read_multilevel_pointer(readPointer(base_ptr), {0x10, 0x3C0})
+    -- local three = gCTManager.memory_manager:read_multilevel_pointer(readPointer(base_ptr), {0x10, 0x3F0})
     -- local bruteforce_find = {
-    --     "pPlayersTableCurrentRecord",
-    --     "pTeamplayerlinksTableFirstRecord",
-    --     "pTeamsTableFirstRecord",
-    --     "pLeagueteamlinksTableFirstRecord",
-    --     "pManagerTableFirstRecord",
-    --     "pCareerCalendarTableFirstRecord"
+    --     "pUsersTableFirstRecord"
     -- }
 
     
@@ -389,14 +390,6 @@ function TableManager:init_ptrs()
     --     xxx = xxx + 8
     -- end
 
-    -- Players Table
-    -- local players_firstrecord = self.memory_manager:read_multilevel_pointer(DB_One_Tables_ptr, {0xB8, 0x28, 0x30})
-    -- -- [firstPlayerDataPtr+b8]+28]+30]0
-
-    -- self.logger:debug(string.format("players_firstrecord %X", players_firstrecord))
-    -- writeQword("pPlayersTableFirstRecord", players_firstrecord)
-    -- writeQword("pPlayersTableCurrentRecord", players_firstrecord)
-
     self.game_db_manager:add_table(
         "players",
         self.memory_manager:read_multilevel_pointer(DB_One_Tables_ptr, {0xB8, 0x28}),
@@ -433,15 +426,34 @@ function TableManager:init_ptrs()
         {"pCareerCalendarTableCurrentRecord", "pCareerCalendarTableFirstRecord"}
     )
 
-    local base_ptr2 = self.memory_manager:get_validated_resolved_ptr("pScriptsBase", 3)
+    self.game_db_manager:add_table(
+        "career_playercontract",
+        self.memory_manager:read_multilevel_pointer(DB_Two_Tables_ptr, {0x30, 0x28}),
+        {"pCareerPlayercontractTableCurrentRecord", "pCareerPlayercontractTableFirstRecord"}
+    )
+
+    self.game_db_manager:add_table(
+        "career_users",
+        self.memory_manager:read_multilevel_pointer(DB_Two_Tables_ptr, {0x50, 0x28}),
+        {"pUsersTableCurrentRecord", "pUsersTableFirstRecord"}
+    )
+
+    local base_ptr2 = self.memory_manager:get_validated_resolved_ptr("pScriptsBase", 3) or 0
     self.logger:debug(string.format("pScriptsBase %X", base_ptr2))
     writeQword("pScriptsBase", base_ptr2)
 
-    if base_ptr2 then
+    if base_ptr2 > 0 then
         local form_ptr = self.memory_manager:read_multilevel_pointer(
             readPointer("pScriptsBase"),
             {0x0, 0x518, 0x0, 0x20, 0x130, 0x140}
         ) -- +28 - n on players
+
+        local rlc_ptr = self.memory_manager:read_multilevel_pointer(
+            readPointer("pScriptsBase"),
+            {0x0, 0x518, 0x0, 0x20, 0xB8}
+        )
+        -- Start list = 0x160
+        -- end list = 0x168
     
         local morale_ptr = self.memory_manager:read_multilevel_pointer(
             readPointer("pScriptsBase"),
@@ -458,9 +470,32 @@ function TableManager:init_ptrs()
         -- end list = 0x5b8
 
         self.logger:debug(string.format("form_ptr %X", form_ptr or 0))
+        self.logger:debug(string.format("rlc_ptr %X", rlc_ptr or 0))
         self.logger:debug(string.format("morale_ptr %X", morale_ptr or 0))
         self.logger:debug(string.format("pgs_ptr %X", pgs_ptr or 0))
     end
+
+    local base_ptr3 = self.memory_manager:get_validated_resolved_ptr("pCareerModeSmth", 3) or 0
+    self.logger:debug(string.format("pCareerModeSmth %X", base_ptr3))
+    writeQword("pCareerModeSmth", base_ptr3)
+    if base_ptr3 > 0 then
+        local squad_role_ptr = self.memory_manager:read_multilevel_pointer(
+            readPointer("pCareerModeSmth"),
+            {0x0, 0x10, 0x48, 0x30, 0x180+0x48}
+        )   
+
+        self.logger:debug(string.format("squad_role_ptr %X", squad_role_ptr or 0))
+
+        local fitness_manager_ptr = self.memory_manager:read_multilevel_pointer(
+            readPointer("pCareerModeSmth"),
+            {0x0, 0x10, 0x48, 0x30, 0x180+0x50}
+        )
+        -- 0x19a0 start
+        -- 0x19a8 end
+        self.logger:debug(string.format("fitness_manager_ptr %X", fitness_manager_ptr or 0))
+    end
+    
+
 end
 
 function TableManager:autoactivate_scripts()

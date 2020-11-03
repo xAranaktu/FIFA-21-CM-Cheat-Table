@@ -13,7 +13,7 @@
 -- isretiring field to 0
 -- Which means that there won't be any player which will retire at the end of the season.
 -- You need to run the script every season (before end) if you want to make players no retire at all.
-
+gCTManager:init_ptrs()
 local game_db_manager = gCTManager.game_db_manager
 local memory_manager = gCTManager.memory_manager
 

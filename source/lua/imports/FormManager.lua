@@ -10,12 +10,160 @@ function FormManager:new(o)
     
     self.cfg = nil
     self.logger = nil
+    self.game_db_manager = nil
+    self.memory_manager = nil
 
     self.resize = nil
     self.frm = nil
     self.name = ""
 
     return o;
+end
+
+function FormManager:safe_load_picture_from_ss(comp, ss)
+    if type(ss) == "userdata" then
+        comp.LoadFromStream(ss)
+        return true
+    end
+
+    return false
+end
+
+function FormManager:load_img(path, url)
+    self.logger:info(string.format(
+        "load_img: %s, %s", path, url
+    ))
+    local img = nil
+    local cache_dir = self.dirs["CACHE"]
+    
+    local f=io.open(cache_dir .. path, "rb")
+    local err = nil
+    if f ~= nil then
+        -- load from cache_dir
+        img = f:read("*a")
+        io.close(f)
+    else
+        -- load from internet and save in cache_dir
+        local int=getInternet()
+        img=int.getURL(url)
+        int.destroy()
+        -- If file is not a png file
+        if img == nil or string.sub(img, 2, 4) ~= 'PNG' then
+            return false
+        end
+        f, err=io.open(cache_dir .. path, "w+b")
+        if f then
+            f:write(img)
+            io.close(f)
+        else
+            self.logger:info('Error opening img file: ' .. cache_dir .. path)
+            if err then
+                self.logger:info('Error - ' .. err)
+            end
+        end
+    end
+    return createStringStream(img)
+end
+
+function FormManager:load_crest(teamid, addr)
+    local can_get_record = false
+
+    if addr and self.game_db_manager then
+        can_get_record = true
+    end
+
+    if not teamid and can_get_record then
+        teamid = self.game_db_manager:get_table_record_field_value(addr, "teamplayerlinks", "teamid")
+    end
+
+    if not teamid then
+        return self:load_img('crest/notfound.png', URL_LINKS["CDN"] .. '/img/assets/common/crest/notfound.png')
+    end
+
+    local fpath = string.format('crest/l%d.png', teamid)
+    local url = string.format('%s/img/assets/%d/%s',
+        URL_LINKS["CDN"],
+        FIFA,
+        string.format('crest/dark/l%d.png', teamid)
+    )
+    local img_ss = self:load_img(fpath, url)
+    if not img_ss then return self:load_img('crest/notfound.png', URL_LINKS["CDN"] .. '/img/assets/common/crest/notfound.png') end
+    
+    return img_ss
+end
+
+function FormManager:load_headshot(playerid, addr, skintonecode, headtypecode, haircolorcode)
+    local can_get_record = false
+
+    if addr and self.game_db_manager then
+        can_get_record = true
+    end
+
+    if not playerid and can_get_record then
+        playerid = self.game_db_manager:get_table_record_field_value(addr, "players", "playerid")
+    end
+
+    if not playerid then
+        return self:load_img('heads/notfound.png', URL_LINKS["CDN"] .. '/img/assets/common/heads/notfound.png')
+    end
+
+    local fpath = nil
+    local iplayerid = tonumber(playerid)
+
+    if iplayerid < 280000 then
+        -- heads
+        fpath = string.format('heads/p%d.png', playerid)
+    else
+        -- youthheads
+        if skintonecode == nil and can_get_record then
+            skintonecode = self.game_db_manager:get_table_record_field_value(addr, "players", "skintonecode")
+        else
+            skintonecode = 0
+        end
+
+        if headtypecode == nil and can_get_record then
+            headtypecode = self.game_db_manager:get_table_record_field_value(addr, "players", "headtypecode")
+        else
+            headtypecode = 0
+        end
+
+        if haircolorcode == nil and can_get_record then
+            haircolorcode = self.game_db_manager:get_table_record_field_value(addr, "players", "haircolorcode")
+        else
+            haircolorcode = 0
+        end
+        
+        fpath = string.format('youthheads/p%d%04d%02d.png', skintonecode, headtypecode, haircolorcode)
+    end
+    
+    local url = string.format('%s/img/assets/%d/%s', URL_LINKS["CDN"], FIFA, fpath)
+    local img_ss = self:load_img(fpath, url)
+    
+    -- If file is not a png file use notfound.png
+    if not img_ss then return self:load_img('heads/notfound.png', URL_LINKS["CDN"] .. '/img/assets/common/heads/notfound.png') end
+    
+    return img_ss
+end
+
+function FormManager:is_manager_career(addr)
+    if not addr then
+        self.logger:warning("is_manager_career, no addr")
+        return 0
+    end
+    local playertype = self.game_db_manager:get_table_record_field_value(addr, "career_users", "playertype")
+    self.logger:debug(string.format("playertype: %d, %s", playertype, type(playertype)))
+    local result = playertype == -1
+    return result
+end
+
+function FormManager:get_user_clubteamid(addr)
+    if not addr then
+        self.logger:warning("get_user_clubteamid, no addr")
+        return 0
+    end
+    local clubteamid = self.game_db_manager:get_table_record_field_value(addr, "career_users", "clubteamid")
+    self.logger:debug(string.format("clubteamid: %d, %s", clubteamid, type(clubteamid)))
+    return clubteamid
 end
 
 function FormManager:set_cfg(new_cfg)

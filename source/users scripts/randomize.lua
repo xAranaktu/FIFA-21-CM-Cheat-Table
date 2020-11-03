@@ -29,6 +29,7 @@ local age_min = 16  -- Not younger than 16 years
 
 
 -- Don't change anything below
+gCTManager:init_ptrs()
 local game_db_manager = gCTManager.game_db_manager
 local memory_manager = gCTManager.memory_manager
 

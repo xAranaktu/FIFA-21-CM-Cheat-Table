@@ -50,7 +50,7 @@ local new_age = 16
 --     end
 --     return age
 -- end
-
+gCTManager:init_ptrs()
 local game_db_manager = gCTManager.game_db_manager
 local memory_manager = gCTManager.memory_manager
 

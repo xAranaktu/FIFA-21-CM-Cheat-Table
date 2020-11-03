@@ -8,6 +8,45 @@ function onScriptActivate()
     -- end
 end
 
+function is_cm_loaded()
+    local modules = enumModules()
+    for _, module in ipairs(modules) do
+        if module.Name == 'FootballCompEng_Win64_retail.dll' then
+            -- We are in career mode
+            return true
+        end
+    end
+
+    -- We are outside career mode
+    return false
+end
+
+function value_to_date(value)
+    -- Convert value from the game to human readable form (format: DD/MM/YYYY)
+    -- ex. 20180908 -> 08/09/2018
+    local to_string = string.format('%d', value)
+    return string.format(
+        '%s/%s/%s',
+        string.sub(to_string, 7),
+        string.sub(to_string, 5, 6),
+        string.sub(to_string, 1, 4)
+    )
+end
+
+function date_to_value(d)
+    local m_date, _ = string.gsub(d, '%D', '')
+    if string.len(m_date) ~= 8 then
+        m_date = "01/01/2008"
+    end
+    m_date = string.format(
+        '%s%s%s',
+        string.sub(m_date, 5),
+        string.sub(m_date, 3, 4),
+        string.sub(m_date, 1, 2)
+    )
+    return tonumber(m_date)
+end
+
 function math.round(n)
     return n % 1 >= 0.5 and math.ceil(n) or math.floor(n)
 end

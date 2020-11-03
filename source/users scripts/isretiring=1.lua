@@ -13,7 +13,7 @@
 -- isretiring field to 1
 -- Which means that all players will retire at the end of current season
 -- Most probably your game will crash and your career will be broken and unplayable. But you constantly asking about this, so here you go.
-
+gCTManager:init_ptrs()
 local game_db_manager = gCTManager.game_db_manager
 local memory_manager = gCTManager.memory_manager
 

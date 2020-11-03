@@ -10,7 +10,7 @@
 
 --- It may take a few mins. Cheat Engine will stop responding and it's normal behaviour. Wait until you get 'Done' message.
 -- This script change socks length on medium
-
+gCTManager:init_ptrs()
 local game_db_manager = gCTManager.game_db_manager
 local memory_manager = gCTManager.memory_manager
 
