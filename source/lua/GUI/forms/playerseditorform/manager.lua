@@ -1,5 +1,6 @@
 require 'lua/consts';
 require 'lua/helpers';
+json = require 'lua/requirements/json';
 
 local FormManager = require 'lua/imports/FormManager';
 
@@ -33,6 +34,8 @@ function thisFormManager:new(o)
     self.tab_panel_map = {}
 
     self.change_list = {}
+
+    self.fut_found_players = nil
 
     return o;
 end
@@ -175,6 +178,15 @@ function thisFormManager:recalculate_ovr(update_ovr_edit)
     if update_ovr_edit then
         self.frm.OverallEdit.Text = calculated_ovrs[string.format("%d", preferred_position_id)] + tonumber(self.frm.ModifierEdit.Text)
     end
+
+    local iovr = tonumber(self.frm.OverallEdit.Text)
+    if iovr then
+        if iovr > 99 then 
+            self.frm.OverallEdit.Text = 99
+        elseif iovr <= 0 then
+            self.frm.OverallEdit.Text = 1
+        end
+    end
     self.change_list["OverallEdit"] = self.frm.OverallEdit.Text
 
     for k,v in pairs(unique_ovrs) do
@@ -268,16 +280,16 @@ function thisFormManager:update_cached_field(playerid, field_name, new_value)
         readPointer("pScriptsBase"),
         {0x0, 0x518, 0x0, 0x20, 0xb0}
     )
-    -- Start list = 0x5b0
-    -- end list = 0x5b8
+    -- Start list = 0x5F0
+    -- end list = 0x5F8
 
     
     if not pgs_ptr then
         self.logger:info("No PlayerGrowthSystem pointer")
         return
     end
-    local _start = readPointer(pgs_ptr + 0x5b0)
-    local _end = readPointer(pgs_ptr + 0x5b8)
+    local _start = readPointer(pgs_ptr + 0x5F0)
+    local _end = readPointer(pgs_ptr + 0x5F8)
     if (not _start) or (not _end) then
         self.logger:info("No PlayerGrowthSystem start or end")
         return
@@ -528,6 +540,71 @@ function thisFormManager:get_components_description()
         self.change_list[sender.Name] = sender.Text or sender.ItemIndex
     end
 
+    local fnFillHeadTypeCB = function(sender, headtypecode)
+        --self.logger:debug(string.format("fnFillHeadTypeCB: %s. code: %d", sender.Name, headtypecode))
+        sender.clear()
+        local org_onchange = self.frm.HeadTypeGroupCB.OnChange
+        self.frm.HeadTypeGroupCB.OnChange = nil
+        for key, value in pairs(HEAD_TYPE_GROUPS) do
+            for j=1, #value do
+                if value[j] == headtypecode then
+                    for k=1, #HEAD_TYPE_CB_IDX do
+                        if HEAD_TYPE_CB_IDX[k] == key then
+                            self.frm.HeadTypeGroupCB.ItemIndex = k-1
+                            self.frm.HeadTypeGroupCB.Hint = self.frm.HeadTypeGroupCB.Items[self.frm.HeadTypeGroupCB.ItemIndex]
+                            for l=1, #value do
+                                sender.items.add(value[l])
+                            end
+                            --self.logger:debug(string.format("found: %d", j))
+                            sender.ItemIndex = j-1
+                            self.frm.HeadTypeGroupCB.OnChange = org_onchange
+                            return
+                        end
+                    end
+                end
+            end
+        end
+        self.logger:error(string.format("headtypecode not found, %d", headtypecode))
+        self.frm.HeadTypeGroupCB.OnChange = org_onchange
+    end
+
+    local fnOnChangeHeadTypeGroup = function(sender)
+        local group_name = sender.Items[sender.ItemIndex]
+        sender.Hint = group_name
+        local _key, _ = string.gsub(group_name, ' ', '_') 
+        local headtypecodes = HEAD_TYPE_GROUPS[_key]
+        
+        local org_onchange = self.frm.HeadTypeCodeCB.OnChange
+        self.frm.HeadTypeCodeCB.OnChange = nil
+        self.frm.HeadTypeCodeCB.clear()
+
+        for i=1, #headtypecodes do
+            self.frm.HeadTypeCodeCB.items.add(headtypecodes[i])
+        end
+        self.frm.HeadTypeCodeCB.OnChange = org_onchange
+        
+        self.frm.HeadTypeCodeCB.ItemIndex = 0
+        fnUpdateComboHint(self.frm.HeadTypeCodeCB)
+        fnCommonOnChange(self.frm.HeadTypeCodeCB)
+    end
+
+    local fnOnChangeRequiresMinifaceUpdate = function(sender)
+        local playerid = tonumber(self.frm.PlayerIDEdit.Text)
+        if playerid >= 280000 then
+            local ss_hs = self:load_headshot(
+                playerid, nil,
+                self.frm.SkinColorCB.ItemIndex+1,
+                self.frm.HeadTypeCodeCB.Items[self.frm.HeadTypeCodeCB.ItemIndex],
+                self.frm.HairColorCB.ItemIndex
+            )
+            if self:safe_load_picture_from_ss(self.frm.Headshot.Picture, ss_hs) then
+                ss_hs.destroy()
+                self.frm.Headshot.Picture.stretch=true
+            end
+        end
+        fnCommonOnChange(sender)
+    end
+
     local fnPerformanceBonusOnChange = function(sender)
         fnCommonOnChange(sender)
 
@@ -768,9 +845,11 @@ function thisFormManager:get_components_description()
         self:update_cached_field(tonumber(self.frm.PlayerIDEdit.Text), field_name, new_value)
     end
 
-    local fnGetPlayerAge = function(addrs, table_name, field_name, raw)
+    local fnGetPlayerAge = function(addrs, table_name, field_name, raw, bdatedays)
         local addr = addrs[table_name]
-        local bdatedays = self.game_db_manager:get_table_record_field_value(addr, table_name, field_name, raw)
+        if not bdatedays then
+            bdatedays = self.game_db_manager:get_table_record_field_value(addr, table_name, field_name, raw)
+        end
         local bdate = days_to_date(bdatedays)
 
         self.logger:debug(
@@ -2112,11 +2191,16 @@ function thisFormManager:get_components_description()
                 raw_val = true
             },
             cb_id = CT_MEMORY_RECORDS["HEADTYPE_CB"],
-            cbFiller = fnFillCommonCB,
+            cbFiller = fnFillHeadTypeCB,
             valGetter = fnCommonDBValGetter,
             OnSaveChanges = fnSaveCommonCB,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeRequiresMinifaceUpdate
+            }
+        },
+        HeadTypeGroupCB = {
+            events = {
+                OnChange = fnOnChangeHeadTypeGroup
             }
         },
         HairColorCB = {
@@ -2130,7 +2214,7 @@ function thisFormManager:get_components_description()
             valGetter = fnCommonDBValGetter,
             OnSaveChanges = fnSaveCommonCB,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeRequiresMinifaceUpdate
             }
         },
         HairTypeEdit = {
@@ -2232,7 +2316,7 @@ function thisFormManager:get_components_description()
             valGetter = fnCommonDBValGetter,
             OnSaveChanges = fnSaveCommonCB,
             events = {
-                OnChange = fnCommonOnChange
+                OnChange = fnOnChangeRequiresMinifaceUpdate
             }
         },
         TattooHeadEdit = {
@@ -2886,6 +2970,12 @@ function thisFormManager:onShow_delayed()
 
     self:fill_form(self.current_addrs)
     self:recalculate_ovr(true)
+
+    -- Clone CM
+    self.frm.CopyCMFindPlayerByID.Text = 'Find player by ID...'
+    self.frm.CloneFromListBox.setItemIndex(0)
+    self.frm.CardContainerPanel.Visible = false
+    self.frm.FutFIFACB.Hint = ''
     -- Hide Loading Panel and show components
     self.frm.PlayerInfoTab.Color = "0x001D1618"
     self.frm.PlayerInfoPanel.Visible = true
@@ -2973,7 +3063,7 @@ function thisFormManager:fill_form(addrs, playerid)
         end
 
         local component_name = component.Name
-        -- self.logger:debug(component.Name)
+        --self.logger:debug(component.Name)
         local comp_desc = self.form_components_description[component_name]
         if comp_desc == nil then
             goto continue
@@ -3011,6 +3101,7 @@ function thisFormManager:fill_form(addrs, playerid)
             else
                 component.ItemIndex = 0
             end
+            
             component.Hint = component.Items[component.ItemIndex]
         elseif component_class == 'TCECheckBox' then
             component.State = comp_desc["valGetter"](addrs, comp_desc)
@@ -3194,6 +3285,7 @@ function thisFormManager:get_player_fitness_addr(playerid)
 end
 
 function thisFormManager:save_player_fitness(playerid, new_fitness, is_injured, injury_type, full_fit_on)
+    self.logger:info("save_player_fitness no space")
     if not playerid then
         self.logger:error("save_player_fitness no playerid!")
         return
@@ -4121,17 +4213,17 @@ function thisFormManager:onApplyChangesBtnClick()
                 new_durability = self.frm.DurabilityEdit.Text
             end
 
-            local new_isinjured = nil
+            local new_isinjured = 0
             if self.frm.IsInjuredCB.Visible then
                 new_isinjured = self.frm.IsInjuredCB.ItemIndex
             end
 
-            local new_injury = nil
+            local new_injury = 0
             if self.frm.InjuryCB.Visible then
                 new_injury = self.frm.InjuryCB.ItemIndex
             end
 
-            local new_fullfit = nil
+            local new_fullfit = 20080101
             if self.frm.FullFitDateEdit.Visible then
                 new_fullfit = self.frm.FullFitDateEdit.Text
             end
@@ -4164,6 +4256,1427 @@ function thisFormManager:check_if_has_unsaved_changes()
             self.change_list = {}
         end
     end
+end
+
+function thisFormManager:fut_find_player(player_name, page, fut_fifa)
+    if page == nil then
+        page = 1
+    end
+
+    local request = URL_LINKS['FUT']['player_search'] .. string.format(
+        '?year=%d&extra=1&term=%s',
+        fut_fifa, encodeURI(player_name)
+    )
+    --self.logger:debug(string.format("FUT FIND PLAYER: %s", request))
+    local r = getInternet()
+    local reply = r.getURL(request)
+    if reply == nil then
+        self.logger:warning(string.format('No internet connection? No reply from: %s', request))
+        return nil
+    end
+
+    local status, response = pcall(
+        json.decode,
+        reply
+    )
+
+    if status == false then
+        self.logger:error('Futbin error: ' .. reply)
+        return nil
+    elseif response['error'] then
+        self.logger:error('Futbin error: ' .. response['error'])
+        return nil
+    end
+    --self.logger:debug(string.format("FUT FIND PLAYER response:\n %s", response))
+
+    return response
+end
+
+function thisFormManager:fut_search_player(player_data, page)
+    if string.len(player_data) < 3 then
+        showMessage("Input at least 3 characters.")
+        return
+    end
+    local fut_fifa = FIFA - self.frm.FutFIFACB.ItemIndex
+
+    self.fut_found_players = self:fut_find_player(player_data, page, fut_fifa)
+    if self.fut_found_players == nil then return end
+
+    local players = self.fut_found_players
+
+    local players_count = #players
+    local scrollbox_width = 310
+
+    can_continue = false
+    self.frm.NextPage.Enabled = can_continue
+
+    if page == 1 then
+        self.frm.PrevPage.Enabled = false
+    else
+        self.frm.PrevPage.Enabled = true
+    end
+
+    for i=1, players_count do
+        local player = players[i]
+        local card_type = player['version'] or 'Normal'
+        local formated_string = string.format(
+            '%s - %s - %d ovr - %s',
+            player['full_name'], card_type, player['rating'], player['position']
+        )
+
+        -- Dynamic width
+        local str_len = string.len(formated_string)
+        if str_len >= 35 then
+            local new_width = 310 + ((str_len - 35) * 8)
+            if new_width > scrollbox_width then
+                scrollbox_width = new_width
+            end
+        end
+        self.frm.FUTPickPlayerListBox.Items.Add(formated_string)
+    end
+
+    -- Change width (add scroll)
+    if scrollbox_width ~= self.frm.FUTPickPlayerListBox.Width then
+        self.frm.FUTPickPlayerListBox.Width = scrollbox_width
+    end
+
+    if scrollbox_width > 310 then
+        self.frm.FUTPickPlayerScrollBox.HorzScrollBar.Visible = true
+    else
+        self.frm.FUTPickPlayerScrollBox.HorzScrollBar.Visible = false
+    end
+
+    if players_count >= 27 then
+        self.frm.FUTPickPlayerScrollBox.VertScrollBar.Visible = true
+    else
+        self.frm.FUTPickPlayerScrollBox.VertScrollBar.Visible = false
+    end
+end
+
+function thisFormManager:fut_get_player_details(playerid, fut_fifa)
+    self.logger:info(string.format("Loading FUT%d player: %d", fut_fifa, playerid))
+    local request = string.format(
+        URL_LINKS['FUT']['player_details'],
+        fut_fifa,
+        playerid
+    )
+    self.logger:debug(string.format("fut_get_player_details: %s", request))
+    local r = getInternet()
+    local reply = r.getURL(request)
+    if reply == nil then
+        self.logger:error(string.format('No internet connection? No reply from: %s', request))
+        return nil
+    end
+    --self.logger:info(reply)
+    self.logger:info(string.format("Reply len: %d", string.len(reply)))
+
+    local base_playerid = string.match(reply, 'data%-baseid="(%d+)"')
+    if base_playerid then
+        self.logger:info(string.format("base_playerid: %d", base_playerid))
+    end
+
+    local miniface_img = string.match(reply, '<img%s+class="pcdisplay%-picture%-width "%s+id="player_pic"%s+src="(%a+://[%a+%./%d%?%=]+)')
+    if miniface_img then
+        self.logger:debug(string.format("miniface_img: %s", miniface_img))
+    end
+    local club_img = string.match(reply, '<img alt="c" id="player_club"%s+src="(%a+://[%a+%./%d%?%=]+)')
+
+    local club_id = 0
+    if club_img ~= nil then
+        club_id = string.match(club_img, 'clubs/(%d+).png')
+    else
+        self.logger:info("club_img not found")
+    end
+
+    local nation_img = string.match(reply, '<img alt="n" id="player_nation"%s+src="(%a+://[%a+%./%d%?%=]+)')
+    local nation_id = 0
+    if nation_img ~= nil then
+        nation_id = string.match(nation_img, 'nation/(%d+).png')
+    else
+        self.logger:info("nation_img not found")
+    end
+
+    local ovr = string.match(reply, '<div style="color:[#%S+;|;]+" class="pcdisplay%-rat">(%d+)</div>')
+    local name = string.match(reply, '<div style="color:[#%S+;|;]+" class="pcdisplay%-name">([%S-? ?]+)</div>')
+    local pos = string.match(reply, '<div style="color:[#%S+;|;]+" class="pcdisplay%-pos">([%w]+)</div>')
+
+    local stat1_name, stat1_val = string.match(reply, '<div%A+class="pcdisplay%-ovr1 stat%-val" data%-stat="(%w+)">(%d+)</div>')
+    local stat2_name, stat2_val = string.match(reply, '<div%A+class="pcdisplay%-ovr2 stat%-val" data%-stat="(%w+)">(%d+)</div>')
+    local stat3_name, stat3_val = string.match(reply, '<div%A+class="pcdisplay%-ovr3 stat%-val" data%-stat="(%w+)">(%d+)</div>')
+    local stat4_name, stat4_val = string.match(reply, '<div%A+class="pcdisplay%-ovr4 stat%-val" data%-stat="(%w+)">(%d+)</div>')
+    local stat5_name, stat5_val = string.match(reply, '<div%A+class="pcdisplay%-ovr5 stat%-val" data%-stat="(%w+)">(%d+)</div>')
+    local stat6_name, stat6_val = string.match(reply, '<div%A+class="pcdisplay%-ovr6 stat%-val" data%-stat="(%w+)">(%d+)</div>')
+    local stat_json = string.match(reply, '<div style="display: none;" id="player_stats_json">([{"%w:,}]+)</div>')
+
+    local special_img, rev, lvl, rare_type = string.match(reply, '<div id="Player%-card" data%-special%-img="(%d)" data%-revision="([(%w+_?)"|"]+) data%-level="(%w+)" data%-rare%-type="(%d+)"')
+
+    local card = nil
+    local card_type = nil
+
+    if rev == '"' then
+        rev = nil
+    elseif rev ~= nil then
+        rev = string.gsub(rev, '"', '')
+    end
+
+    if (fut_fifa == 20 or fut_fifa == 21) and (rare_type ~= nil and lvl ~= nil)then
+        if (rev == nil) or (rev == 'if') then
+            -- TODO Other FIFAs
+            card = string.format(
+                "%d_%s.png",
+                rare_type, lvl
+            )
+            card_type = string.format('%s-%s', rare_type, lvl)
+        else
+            card = string.format(
+                "%d_%s.png",
+                rare_type, rev
+            )
+            card_type = string.format('%s-%s', rare_type, rev)
+        end
+    else
+        rare_type = 1
+        rev = 'gold'
+        card = string.format(
+            "%d_%s.png",
+            rare_type, rev
+        )
+        card_type = string.format('%s-%s', rare_type, rev)
+    end
+
+    if stat_json ~= nil then
+        stat_json = json.decode(stat_json)
+
+        -- Special mapping for GK... 
+        if pos == "GK" then
+            stat_json['gkdiving'] = stat_json['ppace']
+            stat_json['gkhandling'] = stat_json['pshooting']
+            stat_json['gkkicking'] = stat_json['ppassing']
+            stat_json['gkreflexes'] = stat_json['pdribbling']
+            stat_json['gkpositioning'] = stat_json['pphysical']
+            stat_json['speed'] = stat_json['pdefending']
+        end
+    end
+
+    self.logger:debug(string.format("Card: %s, card_type: %s", card, card_type))
+    self.logger:info(string.format("Loading FUT%d player: %d Finished", fut_fifa, playerid))
+
+    return {
+        base_playerid = base_playerid,
+        special_img = special_img,
+        card = card,
+        card_type = card_type,
+        miniface_img = miniface_img,
+        club_img = club_img,
+        nation_img = nation_img,
+        club_id = club_id,
+        nation_id = nation_id,
+        ovr = ovr,
+        name = name,
+        pos = pos,
+        stat1_name = stat1_name,
+        stat1_val = stat1_val,
+        stat2_name = stat2_name,
+        stat2_val = stat2_val,
+        stat3_name = stat3_name,
+        stat3_val = stat3_val,
+        stat4_name = stat4_name,
+        stat4_val = stat4_val,
+        stat5_name = stat5_name,
+        stat5_val = stat5_val,
+        stat6_name = stat6_name,
+        stat6_val = stat6_val,
+        stat_json = stat_json
+    }
+end
+
+function thisFormManager:fut_create_card(player, idx)
+    if not player then return end
+
+    local fut_fifa = FIFA - self.frm.FutFIFACB.ItemIndex
+    local player_details = self:fut_get_player_details(player['id'], fut_fifa)
+    self.fut_found_players[idx]['details'] = player_details
+
+    -- Cards img
+    local card = player_details['card']
+    if card ~= nil then
+        local url = URL_LINKS['FUT']['card_bg'] .. card .. '?v=138'
+        local stream = self:load_img('ut/cards_bg/' .. card, url)
+
+        if stream then
+            self.frm.CardBGImage.Picture.LoadFromStream(stream)
+            stream.destroy()
+        else
+            self.logger:info("invalid card bg: " .. card .. " trying to load default gold")
+            card = '1_gold.png'
+            player_details['card_type'] = '1-gold'
+            url = URL_LINKS['FUT']['card_bg'] .. card .. '?v=138'
+            stream = self:load_img('ut/cards_bg/' .. card, url)
+            if stream then
+                self.frm.CardBGImage.Picture.LoadFromStream(stream)
+                stream.destroy()
+            else
+                self.logger:info("default gold bg failed")
+            end
+        end
+    end
+    -- Headshot
+    if player_details['miniface_img'] ~= nil then
+        local img_comp = nil
+        if player_details['special_img'] == 1 then
+            img_comp = self.frm.CardSpecialHeadshotImage
+            self.frm.CardHeadshotImage.Visible = false
+            self.frm.CardSpecialHeadshotImage.Visible = true
+        else
+            img_comp = self.frm.CardHeadshotImage
+            self.frm.CardHeadshotImage.Visible = true
+            self.frm.CardSpecialHeadshotImage.Visible = false
+        end
+        -- print(player['headshot']['imgUrl'])
+
+        local stream = self:load_img(
+            string.format('heads/p%d.png', player['id']),
+            player_details['miniface_img']
+        )
+        if stream then
+            img_comp.Picture.LoadFromStream(stream)
+            stream.destroy()
+        end
+    end
+
+    -- Nationality Img
+    local stream = self:load_img(
+        string.format('flags/f%d.png', player_details['nation_id']),
+        player_details['nation_img']
+    )
+    if stream then
+        self.frm.CardNatImage.Picture.LoadFromStream(stream)
+        stream.destroy()
+    end
+
+    -- Club crest Img
+    stream = self:load_img(
+        string.format('crest/l%d.png', player_details['club_id']),
+        player_details['club_img']
+    )
+    if stream then
+        self.frm.CardClubImage.Picture.LoadFromStream(stream)
+        stream.destroy()
+    end
+
+    -- Font colors for labels on card
+    local type_color_map = {
+        -- Non Rare
+        ['0-bronze'] = '0x2B2217',
+        ['0-silver'] = '0x26292A',
+        ['0-gold'] = '0x443A22',
+
+        -- Rare
+        ['1-bronze'] = '0x3A2717',
+        ['1-silver'] = '0x303536',
+        ['1-gold'] = '0x46390C',
+
+        -- TOTW
+        ['3-bronze'] = '0xBB9266',
+        ['3-silver'] = '0xB0BCC8',
+        ['3-gold'] = '0xE9CC74',
+
+        -- HERO
+        ['4-gold'] = '0xFBFBFB',
+
+        -- TOTY
+        ['5-gold'] = '0xEBCD5B',
+
+        -- Record breaker
+        ['6-gold'] = '0xFBFBFB',
+
+        -- St. Patrick's Day
+        ['7-gold'] = '0xFBFBFB',
+
+        -- Domestic MOTM
+        ['8-gold'] = '0xFBFBFB',
+
+        -- FUT Champions
+        ['18-bronze'] = '0xBB9266',
+        ['18-silver'] = '0xB0BCC8',
+        ['18-gold'] = '0xE3CF83',
+
+        -- Pro player
+        ['10-gold'] = '0x625217',
+
+        -- Special item
+        ['9-gold'] = '0x12FCC6',
+        ['11-gold'] = '0x12FCC6',
+        ['16-gold'] = '0x12FCC6',
+        ['23-gold'] = '0x12FCC6',
+        ['26-gold'] = '0x12FCC6',
+        ['30-gold'] = '0x12FCC6',
+        ['37-gold'] = '0x12FCC6',
+        ['44-gold'] = '0x12FCC6',
+        ['50-gold'] = '0x12FCC6',
+        ['80-gold'] = '0x12FCC6',
+
+        -- Icons
+        ['12-icon'] = '0x625217',
+
+        -- The journey
+        ['17-gold'] = '0xE9CC74',
+
+        -- OTW
+        ['21-gold'] = '0xFF4782',
+
+        -- Ultimate SCREAM
+        ['21-otw'] = '0xFF690D',
+
+        -- SBC
+        ['24-gold'] = '0x72C0FF',
+
+        -- Premium SBC
+        ['25-gold'] = '0xFD95F6',
+
+        -- Award winner
+        ['28-gold'] = '0xFBFBFB',
+
+        -- FUTMAS
+        ['32-gold'] = '0xFBFBFB',
+
+        -- POTM Bundesliga
+        ['42-gold'] = '0xFBFBFB',
+
+        -- POTM PL
+        ['43-gold'] = '0x05f1ff',
+
+        -- UEFA Euro League MOTM
+        ['45-gold'] = '0xF39200',
+
+        -- UCL Common
+        ['47-gold'] = '0xFBFBFB',
+
+        -- UCL Rare
+        ['48-gold'] = '0xFBFBFB',
+
+        -- UCL MOTM
+        ['49-gold'] = '0xFBFBFB',
+
+        -- Flashback sbc
+        ['51-sbc_flashback'] = '0xB0FFEB',
+        
+        -- Swap Deals I
+        ['52-bronze'] = '0x05b3c3',
+        ['52-silver'] = '0x05b3c3',
+        ['52-gold'] = '0x05b3c3',
+
+        -- Swap Deals II
+        ['53-gold'] = '0x05b3c3',
+
+        -- Swap Deals III
+        ['54-gold'] = '0x05b3c3',
+
+        -- Swap Deals IV
+        ['55-gold'] = '0x05b3c3',
+
+        -- Swap Deals V
+        ['56-gold'] = '0x05b3c3',
+
+        -- Swap Deals VI
+        ['57-gold'] = '0x05b3c3',
+
+        -- Swap Deals VII
+        ['58-gold'] = '0x05b3c3',
+
+        -- Swap Deals VII
+        ['59-gold'] = '0x05b3c3',
+
+        -- Swap Deals IX
+        ['60-gold'] = '0x05b3c3',
+
+        -- Swap Deals X
+        ['61-gold'] = '0x05b3c3',
+
+        -- Swap Deals XI
+        ['62-gold'] = '0x05b3c3',
+
+        -- Swap Deals Rewards
+        ['63-gold'] = '0x05b3c3',
+
+        -- TOTY Nominee
+        ['64-gold'] = '0xEFD668',
+
+        -- TOTS Nominee
+        ['65-gold'] = '0xEFD668',
+
+        -- TOTS 85+
+        ['66-gold'] = '0xEFD668',
+
+        -- POTM MLS
+        ['67-gold'] = '0xFBFBFB',
+
+        -- UEFA Euro League TOTT
+        ['68-gold'] = '0xFBFBFB',
+
+        -- UCL Premium SBC
+        ['69-gold'] = '0xFBFBFB',
+
+        -- UCL Euro League TOTT
+        ['70-gold'] = '0xFBFBFB',
+
+        -- FUTURE Stars
+        ['71-gold'] = '0xC0FF36',
+
+        -- Carniball
+        ['72-gold'] = '0xC0FF36',
+
+        -- Lunar NEW YEAR
+        ['73-gold'] = '0xFBFBFB',
+
+        -- Holi
+        ['74-gold'] = '0xFBFBFB',
+
+        -- Easter
+        ['75-gold'] = '0xFBFBFB',
+
+        -- National Day I
+        ['76-gold'] = '0xFBFBFB',
+
+        -- UEFA EUROPA LEAGUE
+        ['78-gold'] = '0xFBFBFB',
+
+        -- POTM LaLiga
+        ['79-gold'] = '0xFBFBFB',
+
+        -- FUTURE Stars Nom
+        ['83-gold'] = '0xC0FF36',
+
+        -- Priem icon Moments
+        ['84-gold'] = '0x625217',
+
+        -- Headliners
+        ['85-gold'] = '0xFBFBFB',
+    }
+
+    -- print(string.format('%d-%s', player['rarityId'], player['quality']))
+    local f_color = type_color_map[player_details['card_type']]
+
+    if f_color == nil then
+        f_color = '0xFBFBFB'
+    end
+
+    -- OVR LABEL
+    self.frm.CardNameLabel.Caption = player_details['ovr']
+    self.frm.CardNameLabel.Font.Color = f_color
+
+    -- Position LABEL
+    self.frm.CardPosLabel.Caption = player_details['pos']
+    self.frm.CardPosLabel.Font.Color = f_color
+
+    -- Player Name Label
+    self.frm.CardPlayerNameLabel.Caption = player_details['name']
+    self.frm.CardPlayerNameLabel.Font.Color = f_color
+
+    -- Attributes
+    self:fut_fill_attributes(player_details, f_color)
+end
+
+function thisFormManager:fut_fill_attributes(player, f_color)
+    -- Attr chem styles
+
+    local chanded_attr_arr = {}
+
+    local picked_chem_style = self.frm.FUTChemStyleCB.Items[self.frm.FUTChemStyleCB.ItemIndex]
+
+    -- If picked chem style other than None/Basic
+    if string.match(picked_chem_style, ',') then
+        local changed_attr = split(string.match(picked_chem_style, "%((.+)%)"), ',')
+        for i=1, #changed_attr do
+            local attr = changed_attr[i]
+            attr = string.gsub(attr, '+', '')
+            chanded_attr_arr[string.match(attr, "([A-Z]+)")] = tonumber(string.match(attr, "([0-9]+)"))
+        end
+    end
+
+    -- Attributes
+    local attr_abbr = {
+        pace = "PAC",
+        shooting = "SHO",
+        passing = "PAS",
+        dribblingp = "DRI",
+        defending = "DEF",
+        heading = "PHY",
+        gkdiving = "DIV",
+        gkhandling = "HAN",
+        gkkicking = "KIC",
+        gkreflexes = "REF",
+        speed = "SPE",
+        gkpositioning = "POS"
+    }
+    for i=1, 6 do
+        local component = self.frm[string.format('CardPlayerAttrLabel%d', i)]
+        local attr_name = attr_abbr[player[string.format('stat%d_name', i)]]
+        local attr_val = player[string.format('stat%d_val', i)]
+        if chanded_attr_arr[attr_name] then
+            attr_val = string.format("%d +%d", attr_val, chanded_attr_arr[attr_name])
+        end
+
+        local caption = string.format(
+            '%s %s',
+            attr_val,
+            attr_name
+        )
+        component.Caption = caption
+        if f_color then component.Font.Color = f_color end
+    end
+end
+
+function thisFormManager:fut_copy_card_to_gui(player)
+    self.logger:info("fut_copy_card_to_gui")
+    local columns = {
+        firstnameid = 1,
+        lastnameid = 2,
+        playerjerseynameid = 3,
+        commonnameid = 4,
+        skintypecode = 5,
+        trait2 = 6,
+        bodytypecode = 7,
+        haircolorcode = 8,
+        facialhairtypecode = 9,
+        curve = 10,
+        jerseystylecode = 11,
+        agility = 12,
+        tattooback = 13,
+        accessorycode4 = 14,
+        gksavetype = 15,
+        positioning = 16,
+        tattooleftarm = 17,
+        hairtypecode = 18,
+        standingtackle = 19,
+        preferredposition3 = 20,
+        longpassing = 21,
+        penalties = 22,
+        animfreekickstartposcode = 23,
+        animpenaltieskickstylecode = 24,
+        isretiring = 25,
+        longshots = 26,
+        gkdiving = 27,
+        interceptions = 28,
+        shoecolorcode2 = 29,
+        crossing = 30,
+        potential = 31,
+        gkreflexes = 32,
+        finishingcode1 = 33,
+        reactions = 34,
+        composure = 35,
+        vision = 36,
+        contractvaliduntil = 37,
+        animpenaltiesapproachcode = 38,
+        finishing = 39,
+        dribbling = 40,
+        slidingtackle = 41,
+        accessorycode3 = 42,
+        accessorycolourcode1 = 43,
+        headtypecode = 44,
+        sprintspeed = 45,
+        height = 46,
+        hasseasonaljersey = 47,
+        tattoohead = 48,
+        preferredposition2 = 49,
+        strength = 50,
+        shoetypecode = 51,
+        birthdate = 52,
+        preferredposition1 = 53,
+        tattooleftleg = 54,
+        ballcontrol = 55,
+        shotpower = 56,
+        trait1 = 57,
+        socklengthcode = 58,
+        weight = 59,
+        hashighqualityhead = 60,
+        gkglovetypecode = 61,
+        tattoorightarm = 62,
+        balance = 63,
+        gender = 64,
+        headassetid = 65,
+        gkkicking = 66,
+        internationalrep = 67,
+        animpenaltiesmotionstylecode = 68,
+        shortpassing = 69,
+        freekickaccuracy = 70,
+        skillmoves = 71,
+        faceposerpreset = 72,
+        usercaneditname = 73,
+        avatarpomid = 74,
+        attackingworkrate = 75,
+        finishingcode2 = 76,
+        aggression = 77,
+        acceleration = 78,
+        headingaccuracy = 79,
+        iscustomized = 80,
+        eyebrowcode = 81,
+        runningcode2 = 82,
+        modifier = 83,
+        gkhandling = 84,
+        eyecolorcode = 85,
+        jerseysleevelengthcode = 86,
+        accessorycolourcode3 = 87,
+        accessorycode1 = 88,
+        playerjointeamdate = 89,
+        headclasscode = 90,
+        defensiveworkrate = 91,
+        tattoofront = 92,
+        nationality = 93,
+        preferredfoot = 94,
+        sideburnscode = 95,
+        weakfootabilitytypecode = 96,
+        jumping = 97,
+        personality = 98,
+        gkkickstyle = 99,
+        stamina = 100,
+        playerid = 101,
+        marking = 102,
+        accessorycolourcode4 = 103,
+        gkpositioning = 104,
+        headvariation = 105,
+        skillmoveslikelihood = 106,
+        skintonecode = 107,
+        shortstyle = 108,
+        overallrating = 109,
+        smallsidedshoetypecode = 110,
+        emotion = 111,
+        runstylecode = 112,
+        jerseyfit = 113,
+        accessorycode2 = 114,
+        shoedesigncode = 115,
+        shoecolorcode1 = 116,
+        hairstylecode = 117,
+        animpenaltiesstartposcode = 118,
+        runningcode1 = 119,
+        preferredposition4 = 120,
+        volleys = 121,
+        accessorycolourcode2 = 122,
+        tattoorightleg = 123,
+        facialhaircolorcode = 124
+    }
+
+    local comp_to_column = {
+        FirstNameIDEdit = 'firstnameid',
+        LastNameIDEdit = 'lastnameid',
+        JerseyNameIDEdit = 'playerjerseynameid',
+        CommonNameIDEdit = 'commonnameid',
+        HairColorCB = "haircolorcode",
+        FacialHairTypeEdit = "facialhairtypecode",
+        CurveEdit = "curve",
+        JerseyStyleEdit = "jerseystylecode",
+        AgilityEdit = "agility",
+        AccessoryEdit4 = "accessorycode4",
+        GKSaveTypeEdit = "gksavetype",
+        AttackPositioningEdit = "positioning",
+        HairTypeEdit = "hairtypecode",
+        StandingTackleEdit = "standingtackle",
+        PreferredPosition3CB = "preferredposition3",
+        LongPassingEdit = "longpassing",
+        PenaltiesEdit = "penalties",
+        AnimFreeKickStartPosEdit = "animfreekickstartposcode",
+        AnimPenaltiesKickStyleEdit = "animpenaltieskickstylecode",
+        IsRetiringCB = "isretiring",
+        LongShotsEdit = "longshots",
+        GKDivingEdit = "gkdiving",
+        InterceptionsEdit = "interceptions",
+        shoecolorEdit2 = "shoecolorcode2",
+        CrossingEdit = "crossing",
+        PotentialEdit = "potential",
+        GKReflexEdit = "gkreflexes",
+        FinishingCodeEdit1 = "finishingcode1",
+        ReactionsEdit = "reactions",
+        ComposureEdit = "composure",
+        VisionEdit = "vision",
+        AnimPenaltiesApproachEdit = "animpenaltiesapproachcode",
+        FinishingEdit = "finishing",
+        DribblingEdit = "dribbling",
+        SlidingTackleEdit = "slidingtackle",
+        AccessoryEdit3 = "accessorycode3",
+        AccessoryColourEdit1 = "accessorycolourcode1",
+        HeadTypeCodeCB = "headtypecode",
+        SprintSpeedEdit = "sprintspeed",
+        HeightEdit = "height",
+        hasseasonaljerseyEdit = "hasseasonaljersey",
+        PreferredPosition2CB = "preferredposition2",
+        StrengthEdit = "strength",
+        shoetypeEdit = "shoetypecode",
+        AgeEdit = "birthdate",
+        PreferredPosition1CB = "preferredposition1",
+        BallControlEdit = "ballcontrol",
+        ShotPowerEdit = "shotpower",
+        socklengthEdit = "socklengthcode",
+        WeightEdit = "weight",
+        HasHighQualityHeadCB = "hashighqualityhead",
+        GKGloveTypeEdit = "gkglovetypecode",
+        BalanceEdit = "balance",
+        HeadAssetIDEdit = "headassetid",
+        GKKickingEdit = "gkkicking",
+        InternationalReputationCB = "internationalrep",
+        AnimPenaltiesMotionStyleEdit = "animpenaltiesmotionstylecode",
+        ShortPassingEdit = "shortpassing",
+        FreeKickAccuracyEdit = "freekickaccuracy",
+        SkillMovesCB = "skillmoves",
+        FacePoserPresetEdit = "faceposerpreset",
+        AttackingWorkRateCB = "attackingworkrate",
+        FinishingCodeEdit2 = "finishingcode2",
+        AggressionEdit = "aggression",
+        AccelerationEdit = "acceleration",
+        HeadingAccuracyEdit = "headingaccuracy",
+        EyebrowEdit = "eyebrowcode",
+        runningcodeEdit2 = "runningcode2",
+        ModifierEdit = "modifier",
+        GKHandlingEdit = "gkhandling",
+        EyeColorEdit = "eyecolorcode",
+        jerseysleevelengthEdit = "jerseysleevelengthcode",
+        AccessoryColourEdit3 = "accessorycolourcode3",
+        AccessoryEdit1 = "accessorycode1",
+        HeadClassCodeEdit = "headclasscode",
+        DefensiveWorkRateCB = "defensiveworkrate",
+        NationalityCB = "nationality",
+        PreferredFootCB = "preferredfoot",
+        SideburnsEdit = "sideburnscode",
+        WeakFootCB = "weakfootabilitytypecode",
+        JumpingEdit = "jumping",
+        SkinTypeEdit = "skintypecode",
+        GKKickStyleEdit = "gkkickstyle",
+        StaminaEdit = "stamina",
+        MarkingEdit = "marking",
+        AccessoryColourEdit4 = "accessorycolourcode4",
+        GKPositioningEdit = "gkpositioning",
+        HeadVariationEdit = "headvariation",
+        SkillMoveslikelihoodEdit = "skillmoveslikelihood",
+        SkinColorCB = "skintonecode",
+        shortstyleEdit = "shortstyle",
+        OverallEdit = "overallrating",
+        EmotionEdit = "emotion",
+        JerseyFitEdit = "jerseyfit",
+        AccessoryEdit2 = "accessorycode2",
+        shoedesignEdit = "shoedesigncode",
+        shoecolorEdit1 = "shoecolorcode1",
+        HairStyleEdit = "hairstylecode",
+        BodyTypeCB = "bodytypecode",
+        AnimPenaltiesStartPosEdit = "animpenaltiesstartposcode",
+        runningcodeEdit1 = "runningcode1",
+        PreferredPosition4CB = "preferredposition4",
+        VolleysEdit = "volleys",
+        AccessoryColourEdit2 = "accessorycolourcode2",
+        FacialHairColorEdit = "facialhaircolorcode"
+    }
+
+    local comp_to_fut = {
+        OverallEdit = "ovr",
+        LongShotsEdit = "longshotsaccuracy"
+    }
+
+    local playerid = tonumber(player['details']['base_playerid'])
+    if playerid == nil then
+        self.logger:critical('COPY ERROR\n baseplayerid is nil')
+        return
+    end
+    self.logger:info(string.format("fut_copy_card_to_gui, playerid: %d", playerid))
+    
+    local addrs = self.current_addrs
+    local comps_desc = self:get_components_description()
+    local fut_players_file_path = "other/fut/base_fut_players.csv"
+    for line in io.lines(fut_players_file_path) do
+        local values = split(line, ',')
+        local f_playerid = tonumber(values[columns['playerid']])
+        if not f_playerid then goto continue end
+
+        if f_playerid == playerid then
+            if self.frm.FUTCopyAttribsCB.State == 0 then
+                local trait1_comps = {
+                    "LongThrowInCB",
+                    "PowerFreeKickCB",
+                    "InjuryProneCB",
+                    "SolidPlayerCB",
+                    "DivesIntoTacklesCB",
+                    "",
+                    "LeadershipCB",
+                    "EarlyCrosserCB",
+                    "FinesseShotCB",
+                    "FlairCB",
+                    "LongPasserCB",
+                    "LongShotTakerCB",
+                    "SpeedDribblerCB",
+                    "PlaymakerCB",
+                    "GKLongthrowCB",
+                    "PowerheaderCB",
+                    "GiantthrowinCB",
+                    "OutsitefootshotCB",
+                    "SwervePassCB",
+                    "SecondWindCB",
+                    "FlairPassesCB",
+                    "BicycleKicksCB",
+                    "GKFlatKickCB",
+                    "OneClubPlayerCB",
+                    "TeamPlayerCB",
+                    "ChipShotCB",
+                    "TechnicalDribblerCB",
+                    "RushesOutOfGoalCB",
+                    "CautiousWithCrossesCB",
+                    "ComesForCrossessCB"
+                }
+                local trait1 = toBits(tonumber(values[columns['trait1']]))
+                local index = 1
+                for ch in string.gmatch(trait1, '.') do
+                    local comp = self.frm[trait1_comps[index]]
+                    if comp then
+                        comp.State = tonumber(ch)
+                        self.change_list[comp.Name] = tonumber(ch)
+                    end
+                    
+                    index = index + 1
+                end
+
+                local trait2_comps = {
+                    "",
+                    "SaveswithFeetCB",
+                    "SetPlaySpecialistCB"
+                }
+                local trait2 = toBits(tonumber(values[columns['trait2']]))
+                local index = 1
+                for ch in string.gmatch(trait2, '.') do
+                    local comp = self.frm[trait2_comps[index]]
+                    if comp then
+                        comp.State = tonumber(ch)
+                        self.change_list[comp.Name] = tonumber(ch)
+                    end
+                    
+                    index = index + 1
+                end
+            end
+            
+            local dont_copy_headmodel = (
+                self.frm.FUTCopyHeadModelCB.State == 1 or
+                self.frm.FutFIFACB.ItemIndex > 0
+            )
+            for key, value in pairs(comp_to_column) do
+                local component = self.frm[key]
+                local component_name = component.Name
+                local comp_desc = comps_desc[component_name]
+                local component_class = component.ClassName
+                local org_comp_on_change = component.OnChange
+
+                if dont_copy_headmodel and (
+                    component_name == 'HeadClassCodeEdit' or 
+                    component_name == 'HeadAssetIDEdit' or 
+                    component_name == 'HeadVariationEdit' or 
+                    component_name == 'HairTypeEdit' or 
+                    component_name == 'HairStyleEdit' or 
+                    component_name == 'FacialHairTypeEdit' or 
+                    component_name == 'FacialHairColorEdit' or 
+                    component_name == 'SideburnsEdit' or 
+                    component_name == 'EyebrowEdit' or 
+                    component_name == 'EyeColorEdit' or 
+                    component_name == 'SkinTypeEdit' or
+                    component_name == 'HasHighQualityHeadCB' or 
+                    component_name == 'HairColorCB' or 
+                    component_name == 'HeadTypeCodeCB' or 
+                    component_name == 'SkinColorCB' or
+                    component_name == 'HeadTypeGroupCB'
+                ) then
+                    -- Don't change headmodel
+                elseif component_name == 'AgeEdit' then
+                    if self.frm.FUTCopyAgeCB.State == 0 then 
+                        -- clear
+                        component.OnChange = nil
+
+                        -- Update AgeEdit
+                        if comp_desc['valGetter'] then
+                            component.Text = comp_desc['valGetter']({
+                                addrs,
+                                comp_desc["db_field"]["table_name"],
+                                comp_desc["db_field"]["field_name"],
+                                comp_desc["db_field"]["raw_val"],
+                                values[columns['birthdate']]
+                            })
+                        end
+
+                        component.OnChange = org_comp_on_change
+                    end
+                elseif component_name == 'HeadTypeCodeCB' then
+                    component.OnChange = nil
+                    comp_desc['cbFiller'](component, tonumber(values[columns[value]]))
+                    component.OnChange = org_comp_on_change
+                elseif component_class == 'TCEEdit' then
+                    if self.frm.FUTCopyAttribsCB.State == 1 and (
+                        component.Parent.Parent.Name == 'AttributesPanel' or 
+                        component.Name == 'OverallEdit' or
+                        component.Name == 'PotentialEdit'
+                    ) then
+                        -- Don't copy attributes
+                    elseif self.frm.FUTCopyNameCB.State == 1 and (
+                        component.Name == 'FirstNameIDEdit' or
+                        component.Name == 'LastNameIDEdit' or
+                        component.Name == 'JerseyNameIDEdit' or
+                        component.Name == 'CommonNameIDEdit'
+                    ) then
+                        -- Don't copy name IDs
+                    else
+                        -- clear
+                        component.OnChange = nil
+
+                        local new_comp_text = (
+                            player['details']['stat_json'][value] or 
+                            player['details'][comp_to_fut[key]] or 
+                            player['details']['stat_json'][comp_to_fut[key]] or 
+                            values[columns[value]]
+                        )
+                        
+                        -- Composure has been added in FIFA 18
+                        if (
+                            component.Name == 'ComposureEdit' and
+                            tonumber(new_comp_text) == 0
+                        ) then
+                            new_comp_text = tonumber(player['details']['ovr']) - 6
+                        end
+
+                        component.Text = tonumber(new_comp_text)
+            
+                        component.OnChange = org_comp_on_change
+                    end
+                elseif component_class == 'TCEComboBox' then
+                    if self.frm.FUTCopyAttribsCB.State == 1 and (
+                        component.Parent.Parent.Name == 'AttributesPanel'
+                    ) then
+                        -- Don't copy attributes
+                    elseif self.frm.FUTCopyNationalityCB.State == 1 and (
+                        component.Name == 'NationalityCB'
+                    ) then
+                        -- Don't copy Nationality
+                    else
+                        -- clear
+                        component.OnChange = nil
+
+                        local new_comp_val = nil
+                        if value == 'preferredposition1' then
+                            local pos_name_to_id = {
+                                GK = 0,
+                                SW = 1,
+                                RWB = 2,
+                                RB = 3,
+                                RCB = 4,
+                                CB = 5,
+                                LCB = 6,
+                                LB = 7,
+                                LWB = 8,
+                                RDM = 9,
+                                CDM = 10,
+                                LDM = 11,
+                                RM = 12,
+                                RCM = 13,
+                                CM = 14,
+                                LCM = 15,
+                                LM = 16,
+                                RAM = 17,
+                                CAM = 18,
+                                LAM = 19,
+                                RF = 20,
+                                CF = 21,
+                                LF = 22,
+                                RW = 23,
+                                RS = 24,
+                                ST = 25,
+                                LS = 26,
+                                LW = 27,
+                            }
+                            new_comp_val = pos_name_to_id[player['position']]
+                        else
+                            new_comp_val = (
+                                player['details']['stat_json'][value] or
+                                player['details'][comp_to_fut[key]] or
+                                player['details']['stat_json'][comp_to_fut[key]] or
+                                values[columns[value]]
+                            )
+                        end
+                        comp_desc['cbFiller'](component, new_comp_val)
+                        component.OnChange = org_comp_on_change
+                    end
+                end
+            end
+
+            if self.frm.FUTCopyAttribsCB.State == 0 then
+                -- Apply chem style:
+                local chem_style_itm_index = self.frm.FUTChemStyleCB.ItemIndex
+                local chem_styles = {
+                    -- Basic
+                    {
+                        SprintSpeedEdit = 5,
+                        AttackPositioningEdit = 5,
+                        ShotPowerEdit = 5,
+                        VolleysEdit = 5,
+                        PenaltiesEdit = 5,
+                        VisionEdit = 5,
+                        ShortPassingEdit = 5,
+                        LongPassingEdit = 5,
+                        CurveEdit = 5,
+                        AgilityEdit = 5,
+                        BallControlEdit = 5,
+                        DribblingEdit = 5,
+                        MarkingEdit = 5,
+                        StandingTackleEdit = 5,
+                        SlidingTackleEdit = 5,
+                        JumpingEdit = 5,
+                        StrengthEdit = 5
+                    },
+                    -- GK Basic
+                    {
+                        GKDivingEdit = 10,
+                        GKHandlingEdit = 10,
+                        GKKickingEdit = 10,
+                        GKReflexEdit = 10,
+                        AccelerationEdit = 5,
+                        GKPositioningEdit = 10
+                    },
+                    -- Sniper
+                    {
+                        AttackPositioningEdit = 10,
+                        FinishingEdit = 15,
+                        VolleysEdit = 10,
+                        PenaltiesEdit = 15,
+                        AgilityEdit = 5,
+                        BalanceEdit = 10,
+                        ReactionsEdit = 5,
+                        BallControlEdit = 5,
+                        DribblingEdit = 15
+                    },
+                    -- Finisher
+                    {
+                        FinishingEdit = 5,
+                        ShotPowerEdit = 15,
+                        LongShotsEdit = 15,
+                        VolleysEdit = 10,
+                        PenaltiesEdit = 10,
+                        JumpingEdit = 15,
+                        StrengthEdit = 10,
+                        AggressionEdit = 10
+                    },
+                    -- Deadeye
+                    {
+                        AttackPositioningEdit = 10,
+                        FinishingEdit = 15,
+                        ShotPowerEdit = 10,
+                        LongShotsEdit = 5,
+                        PenaltiesEdit = 5,
+                        VisionEdit = 5,
+                        FreeKickAccuracyEdit = 10,
+                        LongPassingEdit = 5,
+                        ShortPassingEdit = 15,
+                        CurveEdit = 10
+                    },
+                    -- Marksman
+                    {
+                        AttackPositioningEdit = 10,
+                        FinishingEdit = 5,
+                        ShotPowerEdit = 10,
+                        LongShotsEdit = 10,
+                        VolleysEdit = 10,
+                        PenaltiesEdit = 5,
+                        AgilityEdit = 5,
+                        ReactionsEdit = 5,
+                        BallControlEdit = 5,
+                        DribblingEdit = 5,
+                        JumpingEdit = 10,
+                        StrengthEdit = 5,
+                        AggressionEdit = 5
+                    },
+                    -- Hawk
+                    {
+                        AccelerationEdit = 10,
+                        SprintSpeedEdit = 5,
+                        AttackPositioningEdit = 10,
+                        FinishingEdit = 5,
+                        ShotPowerEdit = 10,
+                        LongShotsEdit = 10,
+                        VolleysEdit = 10,
+                        PenaltiesEdit = 5,
+                        JumpingEdit = 10,
+                        StrengthEdit = 5,
+                        AggressionEdit = 10
+                    },
+                    -- Artist
+                    {
+                        VisionEdit = 15,
+                        CrossingEdit = 5,
+                        LongPassingEdit = 15,
+                        ShortPassingEdit = 10,
+                        CurveEdit = 5,
+                        AgilityEdit = 5,
+                        BalanceEdit = 5,
+                        ReactionsEdit = 10,
+                        BallControlEdit = 5,
+                        DribblingEdit = 15
+                    },
+                    -- Architect
+                    {
+                        VisionEdit = 10,
+                        CrossingEdit = 15,
+                        FreeKickAccuracyEdit = 5,
+                        LongPassingEdit = 15,
+                        ShortPassingEdit = 10,
+                        CurveEdit = 5,
+                        JumpingEdit = 5,
+                        StrengthEdit = 15,
+                        AggressionEdit = 10
+                    },
+                    -- Powerhouse
+                    {
+                        VisionEdit = 10,
+                        CrossingEdit = 5,
+                        LongPassingEdit = 10,
+                        ShortPassingEdit = 15,
+                        CurveEdit = 10,
+                        InterceptionsEdit = 5,
+                        MarkingEdit = 10,
+                        StandingTackleEdit = 15,
+                        SlidingTackleEdit = 10
+                    },
+                    -- Maestro
+                    {
+                        AttackPositioningEdit = 5,
+                        FinishingEdit = 5,
+                        ShotPowerEdit = 10,
+                        LongShotsEdit = 10,
+                        VolleysEdit = 10,
+                        VisionEdit = 5,
+                        FreeKickAccuracyEdit = 10,
+                        LongPassingEdit = 5,
+                        ShortPassingEdit = 10,
+                        ReactionsEdit = 5,
+                        BallControlEdit = 5,
+                        DribblingEdit = 10
+                    },
+                    -- Engine
+                    {
+                        AccelerationEdit = 10,
+                        SprintSpeedEdit = 5,
+                        VisionEdit = 5,
+                        CrossingEdit = 5,
+                        FreeKickAccuracyEdit = 10,
+                        LongPassingEdit = 5,
+                        ShortPassingEdit = 10,
+                        CurveEdit = 5,
+                        AgilityEdit = 5,
+                        BalanceEdit = 10,
+                        ReactionsEdit = 5,
+                        BallControlEdit = 5,
+                        DribblingEdit = 10
+                    },
+                    -- Sentinel
+                    {
+                        InterceptionsEdit = 5,
+                        HeadingAccuracyEdit = 10,
+                        MarkingEdit = 15,
+                        StandingTackleEdit = 15,
+                        SlidingTackleEdit = 10,
+                        JumpingEdit = 5,
+                        StrengthEdit = 15,
+                        AggressionEdit = 10
+                    },
+                    -- Guardian
+                    {
+                        AgilityEdit = 5,
+                        BalanceEdit = 10,
+                        ReactionsEdit = 5,
+                        BallControlEdit = 5,
+                        DribblingEdit = 15,
+                        InterceptionsEdit = 10,
+                        HeadingAccuracyEdit = 5,
+                        MarkingEdit = 15,
+                        StandingTackleEdit = 10,
+                        SlidingTackleEdit = 10
+                    },
+                    -- Gladiator
+                    {
+                        AttackPositioningEdit = 15,
+                        FinishingEdit = 5,
+                        ShotPowerEdit = 10,
+                        LongShotsEdit = 5,
+                        InterceptionsEdit = 10,
+                        HeadingAccuracyEdit = 15,
+                        MarkingEdit = 5,
+                        StandingTackleEdit = 10,
+                        SlidingTackleEdit = 15
+                    },
+                    -- Backbone
+                    {
+                        VisionEdit = 5,
+                        CrossingEdit = 5,
+                        LongPassingEdit = 5,
+                        ShortPassingEdit = 10,
+                        CurveEdit = 5,
+                        InterceptionsEdit = 5,
+                        HeadingAccuracyEdit = 5,
+                        MarkingEdit = 10,
+                        StandingTackleEdit = 10,
+                        SlidingTackleEdit = 10,
+                        JumpingEdit = 5,
+                        StrengthEdit = 10,
+                        AggressionEdit = 5
+                    },
+                    -- Anchor
+                    {
+                        AccelerationEdit = 10,
+                        SprintSpeedEdit = 5,
+                        InterceptionsEdit = 5,
+                        HeadingAccuracyEdit = 10,
+                        MarkingEdit = 10,
+                        StandingTackleEdit = 10,
+                        SlidingTackleEdit = 10,
+                        JumpingEdit = 10,
+                        StrengthEdit = 10,
+                        AggressionEdit = 10
+                    },
+                    -- Hunter
+                    {
+                        AccelerationEdit = 15,
+                        SprintSpeedEdit = 10,
+                        AttackPositioningEdit = 15,
+                        FinishingEdit = 10,
+                        ShotPowerEdit = 10,
+                        LongShotsEdit = 5,
+                        VolleysEdit = 10,
+                        PenaltiesEdit = 15
+                    },
+                    -- Catalyst
+                    {
+                        AccelerationEdit = 15,
+                        SprintSpeedEdit = 10,
+                        VisionEdit = 15,
+                        CrossingEdit = 10,
+                        FreeKickAccuracyEdit = 10,
+                        LongPassingEdit = 5,
+                        ShortPassingEdit = 10,
+                        CurveEdit = 15
+                    },
+                    -- Shadow
+                    {
+                        AccelerationEdit = 15,
+                        SprintSpeedEdit = 10,
+                        InterceptionsEdit = 10,
+                        HeadingAccuracyEdit = 10,
+                        MarkingEdit = 15,
+                        StandingTackleEdit = 15,
+                        SlidingTackleEdit = 15
+                    },
+                    -- Wall
+                    {
+                        GKDivingEdit = 15,
+                        GKHandlingEdit = 15,
+                        GKKickingEdit = 15
+                    },
+                    -- Shield
+                    {
+                        GKKickingEdit = 15,
+                        GKReflexEdit = 15,
+                        AccelerationEdit = 10,
+                        SprintSpeedEdit = 5
+                    },
+                    -- Cat
+                    {
+                        GKReflexEdit = 15,
+                        AccelerationEdit = 10,
+                        SprintSpeedEdit = 5,
+                        GKPositioningEdit = 15
+                    },
+                    -- Glove
+                    {
+                        GKDivingEdit = 15,
+                        GKHandlingEdit = 15,
+                        GKPositioningEdit = 15
+                    },
+                }
+
+                if chem_styles[chem_style_itm_index] then
+                    for component_name, modif in pairs(chem_styles[chem_style_itm_index]) do
+                        local component = self.frm[component_name]
+                        -- tmp disable onchange event
+                        local onchange_event = component.OnChange
+                        component.OnChange = nil
+
+                        local new_attr_val = tonumber(component.Text) + modif
+                        if new_attr_val > 99 then
+                            new_attr_val = 99 
+                        elseif new_attr_val <= 0 then
+                            new_attr_val = 1
+                        end
+
+                        component.Text = new_attr_val
+                        
+                        component.OnChange = onchange_event
+                    end
+                end
+
+                local trackbars = {
+                    'AttackTrackBar',
+                    'DefendingTrackBar',
+                    'SkillTrackBar',
+                    'GoalkeeperTrackBar',
+                    'PowerTrackBar',
+                    'MovementTrackBar',
+                    'MentalityTrackBar',
+                }
+                for i=1, #trackbars do
+                    self:update_trackbar(self.frm[trackbars[i]])
+                end
+                
+                -- Adjust Potential
+                if self.frm.FUTAdjustPotCB.State == 1 then
+                    if tonumber(self.frm.OverallEdit.Text) > tonumber(self.frm.PotentialEdit.Text) then
+                        self.frm.PotentialEdit.Text = self.frm.OverallEdit.Text
+                    end
+                end
+
+                -- Fix preferred positions
+                local pos_arr = {self.frm.PreferredPosition1CB.ItemIndex+1}
+                for i=2, 4 do
+                    if pos_arr[1] ~= self.frm[string.format('PreferredPosition%dCB', i)].ItemIndex then
+                        table.insert(pos_arr, self.frm[string.format('PreferredPosition%dCB', i)].ItemIndex)
+                    end
+                end
+                for i=2, 4 do
+                    self.frm[string.format('PreferredPosition%dCB', i)].ItemIndex = pos_arr[i] or 0
+                end
+
+                -- Recalc OVR for best at
+                self:recalculate_ovr(false)
+            end
+            -- DONE
+            self.has_unsaved_changes = true
+            ShowMessage('Data from FUT has been copied to GUI.\nTo see the changes in game you need to "Apply Changes"')
+            return true
+        elseif f_playerid > playerid then
+            -- Not found
+            self.logger:critical('COPY ERROR\n Player not Found: ' .. playerid)
+            return false
+        end
+        ::continue::
+    end
+end
+
+function thisFormManager:onFUTCopyPlayerBtnBtnClick(sender)
+    if not self.fut_found_players then return end
+    local selected = self.frm.FUTPickPlayerListBox.ItemIndex + 1
+    local player = self.fut_found_players[selected]
+
+    if not player then
+        local eemsg = "Select player card first."
+        self.logger:warning(eemsg)
+        showMessage(eemsg)
+        return
+    end
+
+    if player['details'] == nil then
+        local fut_fifa = FIFA - self.frm.FutFIFACB.ItemIndex
+        player['details'] = self:fut_get_player_details(player['id'], fut_fifa)
+        self.fut_found_players[selected]['details'] = player
+    end
+
+    
+    self:fut_copy_card_to_gui(player)
+    self.logger:info("fut_copy_card_to_gui finished")
 end
 
 function thisFormManager:assign_current_form_events()
@@ -4304,6 +5817,82 @@ function thisFormManager:assign_current_form_events()
         self:onPaintButton(sender)
     end
 
+    -- FUT CLONE
+    self.frm.FUTCopyPlayerBtn.OnClick = function(sender)
+        self:onFUTCopyPlayerBtnBtnClick(sender)
+    end
+
+    self.frm.FUTCopyPlayerBtn.OnMouseEnter = function(sender)
+        self:onBtnMouseEnter(sender)
+    end
+
+    self.frm.FUTCopyPlayerBtn.OnMouseLeave = function(sender)
+        self:onBtnMouseLeave(sender)
+    end
+
+    self.frm.FUTCopyPlayerBtn.OnPaint = function(sender)
+        self:onPaintButton(sender)
+    end
+
+    self.frm.FUTChemStyleCB.OnChange = function(sender)
+        sender.Hint = sender.Items[sender.ItemIndex]
+
+        -- Labels on card
+        local selected = self.frm.FUTPickPlayerListBox.ItemIndex + 1
+        local player = self.fut_found_players[selected]
+        if not player then return end
+        if not player['details'] then return end
+    
+        self:fut_fill_attributes(player['details'])
+    end
+
+    self.frm.FindPlayerByNameFUTEdit.OnClick = function(sender)
+        sender.Text = ''
+    end
+
+    self.frm.SearchPlayerByNameFUTBtn.OnClick = function(sender)
+        self.frm.CardContainerPanel.Visible = false
+        self.frm.FUTPickPlayerListBox.clear()
+        if self.frm.FindPlayerByNameFUTEdit.Text == '' then return end
+        if self.frm.FindPlayerByNameFUTEdit.Text == 'Enter player name you want to find' then return end
+        self:fut_search_player(self.frm.FindPlayerByNameFUTEdit.Text, 1)
+    end
+
+    self.frm.FutFIFACB.OnChange = function(sender)
+        self.frm.CardContainerPanel.Visible = false
+        self.frm.FUTPickPlayerListBox.clear()
+        if self.frm.FindPlayerByNameFUTEdit.Text == '' then return end
+        if self.frm.FindPlayerByNameFUTEdit.Text == 'Enter player name you want to find' then return end
+        self:fut_search_player(self.frm.FindPlayerByNameFUTEdit.Text, 1)
+    end
+
+    self.frm.FUTPickPlayerListBox.OnSelectionChange = function(sender, user)
+        local selected = self.frm.FUTPickPlayerListBox.ItemIndex + 1
+        if not self.fut_found_players then return end
+    
+        local player = self.fut_found_players[selected]
+        if not player then return end
+        -- Create CARD in GUI
+        self:fut_create_card(player, selected)
+    
+        if not self.frm.CardContainerPanel.Visible then
+            self.frm.CardContainerPanel.Visible = true
+        end
+    end
+
+    self.frm.PrevPage.OnClick = function(sender)
+        if FUT_API_PAGE == 1 then return end
+    
+        FUT_API_PAGE = FUT_API_PAGE - 1
+        if FUT_API_PAGE < 1 then
+            FUT_API_PAGE = 1
+        end
+        self:fut_search_player(self.frm.FindPlayerByNameFUTEdit.Text, FUT_API_PAGE)
+    end
+    self.frm.NextPage.OnClick = function(sender)
+        FUT_API_PAGE = FUT_API_PAGE + 1
+        self:fut_search_player(self.frm.FindPlayerByNameFUTEdit.Text, FUT_API_PAGE)
+    end
 end
 
 function thisFormManager:setup(params)
@@ -4323,9 +5912,9 @@ function thisFormManager:setup(params)
         OtherTab = "OtherPanel",
         PlayerCloneTab = "PlayerClonePanel"
     }
-    PlayersEditorForm.FindPlayerByID.Text = 'Find player by ID...'
+    self.frm.FindPlayerByID.Text = 'Find player by ID...'
     self.change_list = {}
-
+    self.fut_found_players = nil
     self:assign_current_form_events()
 end
 

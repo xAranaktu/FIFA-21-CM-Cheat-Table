@@ -121,10 +121,10 @@ local pgs_start = nil
 local pgs_end = nil
 
 if pgs_ptr then
-    -- Start list = 0x5b0
-    -- end list = 0x5b8
-    pgs_start = readPointer(pgs_ptr + 0x5b0)
-    pgs_end = readPointer(pgs_ptr + 0x5b8)
+    -- Start list = 0x5F0
+    -- end list = 0x5F8
+    pgs_start = readPointer(pgs_ptr + 0x5F0)
+    pgs_end = readPointer(pgs_ptr + 0x5F8)
 end
 
 function get_players_in_player_growth_system()

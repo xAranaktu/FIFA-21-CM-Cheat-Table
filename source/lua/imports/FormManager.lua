@@ -115,22 +115,28 @@ function FormManager:load_headshot(playerid, addr, skintonecode, headtypecode, h
         fpath = string.format('heads/p%d.png', playerid)
     else
         -- youthheads
-        if skintonecode == nil and can_get_record then
-            skintonecode = self.game_db_manager:get_table_record_field_value(addr, "players", "skintonecode")
-        else
-            skintonecode = 0
+        if skintonecode == nil then
+            if can_get_record then
+                skintonecode = self.game_db_manager:get_table_record_field_value(addr, "players", "skintonecode")
+            else
+                skintonecode = 0
+            end
         end
 
-        if headtypecode == nil and can_get_record then
-            headtypecode = self.game_db_manager:get_table_record_field_value(addr, "players", "headtypecode")
-        else
-            headtypecode = 0
+        if headtypecode == nil then
+            if can_get_record then
+                headtypecode = self.game_db_manager:get_table_record_field_value(addr, "players", "headtypecode")
+            else
+                headtypecode = 0
+            end
         end
 
-        if haircolorcode == nil and can_get_record then
-            haircolorcode = self.game_db_manager:get_table_record_field_value(addr, "players", "haircolorcode")
-        else
-            haircolorcode = 0
+        if haircolorcode == nil then
+            if can_get_record then
+                haircolorcode = self.game_db_manager:get_table_record_field_value(addr, "players", "haircolorcode")
+            else
+                haircolorcode = 0
+            end
         end
         
         fpath = string.format('youthheads/p%d%04d%02d.png', skintonecode, headtypecode, haircolorcode)

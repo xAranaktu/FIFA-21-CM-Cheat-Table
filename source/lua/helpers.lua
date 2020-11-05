@@ -47,6 +47,16 @@ function date_to_value(d)
     return tonumber(m_date)
 end
 
+function encodeURI(str)
+    if (str) then
+        str = string.gsub (str, "\n", "\r\n")
+        str = string.gsub (str, "([^%w ])",
+            function (c) return string.format ("%%%02X", string.byte(c)) end)
+        str = string.gsub (str, " ", "+")
+   end
+   return str
+end
+
 function math.round(n)
     return n % 1 >= 0.5 and math.ceil(n) or math.floor(n)
 end

@@ -466,8 +466,8 @@ function TableManager:init_ptrs()
             readPointer("pScriptsBase"),
             {0x0, 0x518, 0x0, 0x20, 0xb0}
         )
-        -- Start list = 0x5b0
-        -- end list = 0x5b8
+        -- Start list = 0x5F0
+        -- end list = 0x5F8
 
         self.logger:debug(string.format("form_ptr %X", form_ptr or 0))
         self.logger:debug(string.format("rlc_ptr %X", rlc_ptr or 0))
@@ -685,6 +685,7 @@ function TableManager:on_attach_to_process()
 
     -- Generate offsets.ini with all offsets.
     -- self:update_offsets()
+
     self:save_cfg()
     self:autoactivate_scripts()
     self:init_ptrs()
