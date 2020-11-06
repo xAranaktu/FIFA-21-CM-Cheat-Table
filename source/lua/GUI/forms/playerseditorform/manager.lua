@@ -36,6 +36,7 @@ function thisFormManager:new(o)
     self.change_list = {}
 
     self.fut_found_players = nil
+    self.cm_found_player_addr = 0
 
     return o;
 end
@@ -125,7 +126,7 @@ function thisFormManager:find_player_by_id(playerid)
 
     writeQword("pPlayersTableCurrentRecord", addr[1])
 
-    return #addr > 0
+    return addr[1]
 end
 
 function thisFormManager:update_total_stats()
@@ -529,7 +530,11 @@ end
 function thisFormManager:get_components_description()
     local fnUpdateComboHint = function(sender)
         if sender.ClassName == "TCEComboBox" then
-            sender.Hint = sender.Items[sender.ItemIndex]
+            if sender.ItemIndex >= 0 then
+                sender.Hint = sender.Items[sender.ItemIndex]
+            else
+                sender.Hint = "ERROR"
+            end
         end
     end
 
@@ -551,7 +556,12 @@ function thisFormManager:get_components_description()
                     for k=1, #HEAD_TYPE_CB_IDX do
                         if HEAD_TYPE_CB_IDX[k] == key then
                             self.frm.HeadTypeGroupCB.ItemIndex = k-1
-                            self.frm.HeadTypeGroupCB.Hint = self.frm.HeadTypeGroupCB.Items[self.frm.HeadTypeGroupCB.ItemIndex]
+                            if self.frm.HeadTypeGroupCB.ItemIndex >= 0 then
+                                self.frm.HeadTypeGroupCB.Hint = self.frm.HeadTypeGroupCB.Items[self.frm.HeadTypeGroupCB.ItemIndex]
+                            else
+                                self.frm.HeadTypeGroupCB.Hint = "ERROR"
+                            end
+                            
                             for l=1, #value do
                                 sender.items.add(value[l])
                             end
@@ -569,7 +579,10 @@ function thisFormManager:get_components_description()
     end
 
     local fnOnChangeHeadTypeGroup = function(sender)
-        local group_name = sender.Items[sender.ItemIndex]
+        local group_name = sender.Items[1]
+        if sender.ItemIndex >= 0 then
+            group_name = sender.Items[sender.ItemIndex]
+        end
         sender.Hint = group_name
         local _key, _ = string.gsub(group_name, ' ', '_') 
         local headtypecodes = HEAD_TYPE_GROUPS[_key]
@@ -727,12 +740,12 @@ function thisFormManager:get_components_description()
 
         if is_set then
             traitbitfield = bOr(traitbitfield, bShl(1, comp_desc["trait_bit"]))
-            self.logger:debug(string.format("v is set: %d", traitbitfield))
+            -- self.logger:debug(string.format("v is set: %d", traitbitfield))
         else
             traitbitfield = bAnd(traitbitfield, bNot(bShl(1, comp_desc["trait_bit"])))
-            self.logger:debug(string.format("v not: %d", traitbitfield))
+            -- self.logger:debug(string.format("v not: %d", traitbitfield))
         end
-        self.logger:debug(string.format("Save Trait: %d", traitbitfield))
+        -- self.logger:debug(string.format("Save Trait: %d", traitbitfield))
 
         self.game_db_manager:set_table_record_field_value(addr, table_name, field_name, traitbitfield)
     end
@@ -809,8 +822,6 @@ function thisFormManager:get_components_description()
 
         self.game_db_manager:set_table_record_field_value(addr, table_name, field_name, new_value, raw)
     end
-
-    
 
     local fnSaveCommon = function(addrs, comp_name, comp_desc)
         if comp_desc["not_editable"] then return end
@@ -2942,7 +2953,7 @@ function thisFormManager:onShow(sender)
     self.frm.WhileLoadingPanel.Visible = true
 
     -- Not READY!
-    self.frm.PlayerCloneTab.Visible = false
+    -- self.frm.PlayerCloneTab.Visible = false
 
     local onShow_delayed_wrapper = function()
         self:onShow_delayed()
@@ -3101,8 +3112,12 @@ function thisFormManager:fill_form(addrs, playerid)
             else
                 component.ItemIndex = 0
             end
-            
-            component.Hint = component.Items[component.ItemIndex]
+            if component.ItemIndex >= 0 then
+                component.Hint = component.Items[component.ItemIndex]
+            else
+                self.logger:warning(string.format("Invalid value: %s", component.Name))
+                component.Hint = "ERROR"
+            end
         elseif component_class == 'TCECheckBox' then
             component.State = comp_desc["valGetter"](addrs, comp_desc)
         end
@@ -4263,6 +4278,7 @@ function thisFormManager:fut_find_player(player_name, page, fut_fifa)
         page = 1
     end
 
+    -- no pagination here on futbin
     local request = URL_LINKS['FUT']['player_search'] .. string.format(
         '?year=%d&extra=1&term=%s',
         fut_fifa, encodeURI(player_name)
@@ -4307,6 +4323,12 @@ function thisFormManager:fut_search_player(player_data, page)
     local players_count = #players
     local scrollbox_width = 310
 
+    -- FUTBIN, no pagination
+    -- if players_count >= 24 then
+    --     can_continue = true
+    -- else
+    --     can_continue = false
+    -- end
     can_continue = false
     self.frm.NextPage.Enabled = can_continue
 
@@ -5074,9 +5096,118 @@ function thisFormManager:fut_copy_card_to_gui(player)
         self.logger:critical('COPY ERROR\n baseplayerid is nil')
         return
     end
+
+    -- No prime icons in our database, replace all info with medium version
+    local prime_to_medium_icon = {
+        [237067] = 237068,
+        [190042] = 237074,
+        [37576] = 237064,
+        [1397] = 248450,
+        [28130] = 238395,
+        [190045] = 242522,
+        [238380] = 238193,
+        [247553] = 247555,
+        [993] = 256014,
+        [1114] = 243078,
+        [1625] = 237069,
+        [166906] = 239528,
+        [167135] = 247324,
+        [192181] = 239055,
+        [226764] = 238438,
+        [214100] = 238434,
+        [238435] = 191189,
+        [242519] = 242520,
+        [996] = 255477,
+        [984] = 255910,
+        [241] = 239521,
+        [1041] = 239517,
+        [1088] = 239062,
+        [1183] = 239065,
+        [4231] = 242950,
+        [4833] = 239542,
+        [5589] = 239080,
+        [7763] = 247614,
+        [10264] = 239532,
+        [45661] = 242939,
+        [166149] = 247547,
+        [190044] = 239531,
+        [191695] = 239604,
+        [214267] = 239522,
+        [238382] = 1075,
+        [238384] = 238386,
+        [238388] = 4000,
+        [238428] = 190053,
+        [247699] = 247701,
+        [990] = 255358,
+        [51] = 239598,
+        [246] = 239537,
+        [1116] = 239526,
+        [1256] = 242927,
+        [1605] = 239069,
+        [3647] = 243784,
+        [5419] = 239082,
+        [5984] = 242860,
+        [6235] = 239602,
+        [13128] = 239420,
+        [13743] = 242931,
+        [23174] = 254571,
+        [31432] = 247695,
+        [51539] = 239061,
+        [138449] = 247075,
+        [161840] = 239068,
+        [166124] = 239057,
+        [167680] = 247301,
+        [190046] = 242518,
+        [222000] = 239059,
+        [238424] = 238425,
+        [238427] = 1419,
+        [238430] = 1040,
+        [238443] = 238444,
+        [242510] = 242511,
+        [247703] = 247706,
+        [999] = 256154,
+        [987] = 256869,
+        [981] = 256339,
+        [969] = 256432,
+        [240] = 239600,
+        [570] = 239109,
+        [1025] = 238431,
+        [1198] = 239071,
+        [1201] = 239111,
+        [1620] = 238414,
+        [1668] = 242859,
+        [5471] = 242930,
+        [5673] = 239114,
+        [7289] = 237066,
+        [7512] = 238418,
+        [45674] = 247307,
+        [53769] = 239026,
+        [156353] = 238420,
+        [214098] = 239421,
+        [238441] = 5681,
+        [239261] = 52241,
+        [239519] = 942,
+        [243027] = 7518,
+        [243781] = 243712,
+        [978] = 257417,
+        [972] = 255758,
+        [243029] = 243028,
+        [243030] = 4202,
+        [247515] = 247514,
+        [248146] = 248155,
+        [250890] = 250891,
+        [975] = 255355,
+        [242625] = 13383,
+        [238439] = 238440
+    }
+
     self.logger:info(string.format("fut_copy_card_to_gui, playerid: %d", playerid))
-    
-    local addrs = self.current_addrs
+    if prime_to_medium_icon[playerid] then
+        playerid = prime_to_medium_icon[playerid]
+        self.logger:info(string.format("fut_copy_card_to_gui, remapped playerid: %d", playerid))
+    end
+
+
     local comps_desc = self:get_components_description()
     local fut_players_file_path = "other/fut/base_fut_players.csv"
     for line in io.lines(fut_players_file_path) do
@@ -5158,7 +5289,6 @@ function thisFormManager:fut_copy_card_to_gui(player)
                 local comp_desc = comps_desc[component_name]
                 local component_class = component.ClassName
                 local org_comp_on_change = component.OnChange
-
                 if dont_copy_headmodel and (
                     component_name == 'HeadClassCodeEdit' or 
                     component_name == 'HeadAssetIDEdit' or 
@@ -5185,13 +5315,13 @@ function thisFormManager:fut_copy_card_to_gui(player)
 
                         -- Update AgeEdit
                         if comp_desc['valGetter'] then
-                            component.Text = comp_desc['valGetter']({
-                                addrs,
+                            component.Text = comp_desc['valGetter'](
+                                self.current_addrs,
                                 comp_desc["db_field"]["table_name"],
                                 comp_desc["db_field"]["field_name"],
                                 comp_desc["db_field"]["raw_val"],
                                 values[columns['birthdate']]
-                            })
+                            )
                         end
 
                         component.OnChange = org_comp_on_change
@@ -5280,7 +5410,7 @@ function thisFormManager:fut_copy_card_to_gui(player)
                                 RS = 24,
                                 ST = 25,
                                 LS = 26,
-                                LW = 27,
+                                LW = 27
                             }
                             new_comp_val = pos_name_to_id[player['position']]
                         else
@@ -5291,10 +5421,20 @@ function thisFormManager:fut_copy_card_to_gui(player)
                                 values[columns[value]]
                             )
                         end
-                        comp_desc['cbFiller'](component, new_comp_val)
+                        if comp_desc['db_field'] and comp_desc['db_field']['raw_val'] then
+                            local tbl_nm = comp_desc['db_field']['table_name']
+                            local fld_nm = comp_desc['db_field']['field_name']
+                            local meta_idx = DB_TABLES_META_MAP[tbl_nm][fld_nm]
+                            local fld_desc = DB_TABLES_META[tbl_nm][meta_idx]
+                            new_comp_val = math.floor(tonumber(new_comp_val) - fld_desc["rangelow"])
+                        end
+
+                        comp_desc['cbFiller'](component, new_comp_val, comp_desc["cb_id"])
                         component.OnChange = org_comp_on_change
                     end
                 end
+
+                self.change_list[component_name] = 1
             end
 
             if self.frm.FUTCopyAttribsCB.State == 0 then
@@ -5606,6 +5746,7 @@ function thisFormManager:fut_copy_card_to_gui(player)
                         component.Text = new_attr_val
                         
                         component.OnChange = onchange_event
+                        self.change_list[component_name] = 1
                     end
                 end
 
@@ -5627,6 +5768,7 @@ function thisFormManager:fut_copy_card_to_gui(player)
                     if tonumber(self.frm.OverallEdit.Text) > tonumber(self.frm.PotentialEdit.Text) then
                         self.frm.PotentialEdit.Text = self.frm.OverallEdit.Text
                     end
+                    self.change_list["PotentialEdit"] = 1
                 end
 
                 -- Fix preferred positions
@@ -5641,6 +5783,7 @@ function thisFormManager:fut_copy_card_to_gui(player)
                 end
 
                 -- Recalc OVR for best at
+                self.change_list["OverallEdit"] = 1
                 self:recalculate_ovr(false)
             end
             -- DONE
@@ -5679,6 +5822,243 @@ function thisFormManager:onFUTCopyPlayerBtnBtnClick(sender)
     self.logger:info("fut_copy_card_to_gui finished")
 end
 
+function thisFormManager:onCMCopyPlayerBtnClick(sender)
+    self.logger:info("onCMCopyPlayerBtnClick")
+    if not self.cm_found_player_addr or self.cm_found_player_addr <= 0 then
+        self.logger:info("No player found")
+        self.frm.CopyCMFindPlayerByID.Text = ''
+        self.frm.CopyCMImage.Visible = false
+        return
+    end
+
+    local copy_comp_list = {
+        FirstNameIDEdit = true,
+        LastNameIDEdit = true,
+        JerseyNameIDEdit = true,
+        CommonNameIDEdit = true,
+        HairColorCB = true,
+        FacialHairTypeEdit = true,
+        CurveEdit = true,
+        JerseyStyleEdit = true,
+        AgilityEdit = true,
+        AccessoryEdit4 = true,
+        GKSaveTypeEdit = true,
+        AttackPositioningEdit = true,
+        HairTypeEdit = true,
+        StandingTackleEdit = true,
+        PreferredPosition3CB = true,
+        LongPassingEdit = true,
+        PenaltiesEdit = true,
+        AnimFreeKickStartPosEdit = true,
+        AnimPenaltiesKickStyleEdit = true,
+        IsRetiringCB = true,
+        LongShotsEdit = true,
+        GKDivingEdit = true,
+        InterceptionsEdit = true,
+        shoecolorEdit2 = true,
+        CrossingEdit = true,
+        PotentialEdit = true,
+        GKReflexEdit = true,
+        FinishingCodeEdit1 = true,
+        ReactionsEdit = true,
+        ComposureEdit = true,
+        VisionEdit = true,
+        AnimPenaltiesApproachEdit = true,
+        FinishingEdit = true,
+        DribblingEdit = true,
+        SlidingTackleEdit = true,
+        AccessoryEdit3 = true,
+        AccessoryColourEdit1 = true,
+        HeadTypeCodeCB = true,
+        SprintSpeedEdit = true,
+        HeightEdit = true,
+        hasseasonaljerseyEdit = true,
+        PreferredPosition2CB = true,
+        StrengthEdit = true,
+        shoetypeEdit = true,
+        AgeEdit = true,
+        PreferredPosition1CB = true,
+        BallControlEdit = true,
+        ShotPowerEdit = true,
+        socklengthEdit = true,
+        WeightEdit = true,
+        HasHighQualityHeadCB = true,
+        GKGloveTypeEdit = true,
+        BalanceEdit = true,
+        HeadAssetIDEdit = true,
+        GKKickingEdit = true,
+        InternationalReputationCB = true,
+        AnimPenaltiesMotionStyleEdit = true,
+        ShortPassingEdit = true,
+        FreeKickAccuracyEdit = true,
+        SkillMovesCB = true,
+        FacePoserPresetEdit = true,
+        AttackingWorkRateCB = true,
+        FinishingCodeEdit2 = true,
+        AggressionEdit = true,
+        AccelerationEdit = true,
+        HeadingAccuracyEdit = true,
+        EyebrowEdit = true,
+        runningcodeEdit2 = true,
+        ModifierEdit = true,
+        GKHandlingEdit = true,
+        EyeColorEdit = true,
+        jerseysleevelengthEdit = true,
+        AccessoryColourEdit3 = true,
+        AccessoryEdit1 = true,
+        HeadClassCodeEdit = true,
+        DefensiveWorkRateCB = true,
+        NationalityCB = true,
+        PreferredFootCB = true,
+        SideburnsEdit = true,
+        WeakFootCB = true,
+        JumpingEdit = true,
+        SkinTypeEdit = true,
+        GKKickStyleEdit = true,
+        StaminaEdit = true,
+        MarkingEdit = true,
+        AccessoryColourEdit4 = true,
+        GKPositioningEdit = true,
+        HeadVariationEdit = true,
+        SkillMoveslikelihoodEdit = true,
+        SkinColorCB = true,
+        shortstyleEdit = true,
+        OverallEdit = true,
+        EmotionEdit = true,
+        JerseyFitEdit = true,
+        AccessoryEdit2 = true,
+        shoedesignEdit = true,
+        shoecolorEdit1 = true,
+        HairStyleEdit = true,
+        BodyTypeCB = true,
+        AnimPenaltiesStartPosEdit = true,
+        runningcodeEdit1 = true,
+        PreferredPosition4CB = true,
+        VolleysEdit = true,
+        AccessoryColourEdit2 = true,
+        FacialHairColorEdit = true,
+        LongThrowInCB = true,
+        PowerFreeKickCB = true,
+        InjuryProneCB = true,
+        SolidPlayerCB = true,
+        DivesIntoTacklesCB = true,
+        LeadershipCB = true,
+        EarlyCrosserCB = true,
+        FinesseShotCB = true,
+        FlairCB = true,
+        LongPasserCB = true,
+        LongShotTakerCB = true,
+        SpeedDribblerCB = true,
+        PlaymakerCB = true,
+        GKLongthrowCB = true,
+        PowerheaderCB = true,
+        GiantthrowinCB = true,
+        OutsitefootshotCB = true,
+        SwervePassCB = true,
+        SecondWindCB = true,
+        FlairPassesCB = true,
+        BicycleKicksCB = true,
+        GKFlatKickCB = true,
+        OneClubPlayerCB = true,
+        TeamPlayerCB = true,
+        ChipShotCB = true,
+        TechnicalDribblerCB = true,
+        RushesOutOfGoalCB = true,
+        CautiousWithCrossesCB = true,
+        ComesForCrossessCB = true,
+        SaveswithFeetCB = true,
+        SetPlaySpecialistCB = true
+    }
+
+    if self.frm.CMCopyAgeCB.State == 1 then
+        copy_comp_list["AgeEdit"] = false
+    end
+
+    if self.frm.CMCopyNameCB.State == 1 then
+        copy_comp_list["FirstNameIDEdit"] = false
+        copy_comp_list["LastNameIDEdit"] = false
+        copy_comp_list["JerseyNameIDEdit"] = false
+        copy_comp_list["CommonNameIDEdit"] = false
+    end
+
+    if self.frm.CMCopyHeadModelCB.State == 1 then
+        copy_comp_list["HeadClassCodeEdit"] = false
+        copy_comp_list["HeadAssetIDEdit"] = false
+        copy_comp_list["HeadVariationEdit"] = false
+        copy_comp_list["HairTypeEdit"] = false
+        copy_comp_list["HairStyleEdit"] = false
+        copy_comp_list["FacialHairTypeEdit"] = false
+        copy_comp_list["FacialHairColorEdit"] = false
+        copy_comp_list["SideburnsEdit"] = false
+        copy_comp_list["EyebrowEdit"] = false
+        copy_comp_list["EyeColorEdit"] = false
+        copy_comp_list["SkinTypeEdit"] = false
+        copy_comp_list["HasHighQualityHeadCB"] = false
+        copy_comp_list["HairColorCB"] = false
+        copy_comp_list["HeadTypeCodeCB"] = false
+        copy_comp_list["SkinColorCB"] = false
+        copy_comp_list["HeadTypeGroupCB"] = false
+    end
+    
+    local addrs = {
+        players = self.cm_found_player_addr,
+        career_calendar = readPointer("pCareerCalendarTableCurrentRecord"),
+        career_users = readPointer("pUsersTableFirstRecord")
+    }
+    self.logger:debug(string.format("%X", addrs["players"]))
+    local comps_desc = self:get_components_description()
+    for key, value in pairs(copy_comp_list) do
+        if value == true then
+            local component = self.frm[key]
+            local component_name = component.Name
+            local comp_desc = comps_desc[component_name]
+            local component_class = component.ClassName
+            local org_comp_on_change = component.OnChange
+            --self.logger:debug(component_name)
+            component.OnChange = nil
+            if component_class == 'TCEEdit' then
+                if comp_desc["valGetter"] then
+                    component.Text = comp_desc["valGetter"](
+                        addrs,
+                        comp_desc["db_field"]["table_name"],
+                        comp_desc["db_field"]["field_name"],
+                        comp_desc["db_field"]["raw_val"]
+                    )
+                end
+            elseif component_class == 'TCEComboBox' then
+                if comp_desc["valGetter"] and comp_desc["cbFiller"] then
+                    local current_field_val = comp_desc["valGetter"](
+                        addrs,
+                        comp_desc["db_field"]["table_name"],
+                        comp_desc["db_field"]["field_name"],
+                        comp_desc["db_field"]["raw_val"]
+                    )
+                    comp_desc["cbFiller"](
+                        component,
+                        current_field_val,
+                        comp_desc["cb_id"]
+                    )
+                else
+                    component.ItemIndex = 0
+                end
+                if component.ItemIndex >= 0 then
+                    component.Hint = component.Items[component.ItemIndex]
+                else
+                    self.logger:warning(string.format("Invalid value: %s", component.Name))
+                    component.Hint = "ERROR"
+                end
+            elseif component_class == 'TCECheckBox' then
+                component.State = comp_desc["valGetter"](addrs, comp_desc)
+            end
+            self.change_list[component_name] = 1
+            component.OnChange = org_comp_on_change
+        end
+    end
+    self.has_unsaved_changes = true
+    ShowMessage('Player data has been copied to GUI.\nTo see the changes in game you need to "Apply Changes"')
+    self.logger:info("CM Copy Done")
+end
+
 function thisFormManager:assign_current_form_events()
     self:assign_events()
 
@@ -5707,8 +6087,8 @@ function thisFormManager:assign_current_form_events()
 
         self:check_if_has_unsaved_changes()
 
-        local player_found = self:find_player_by_id(playerid)
-        if player_found then
+        local player_found_addr = self:find_player_by_id(playerid)
+        if player_found_addr and player_found_addr > 0 then
             self:find_player_club_team_record(playerid)
             self.frm.FindPlayerByID.Text = playerid
             self:recalculate_ovr()
@@ -5818,6 +6198,20 @@ function thisFormManager:assign_current_form_events()
     end
 
     -- FUT CLONE
+    self.frm.CloneFromListBox.OnSelectionChange = function(sender, user)
+        local Panels = {
+            'CloneFromFUTPanel',
+            'CloneFromCMPanel',
+        }
+        for i=1, #Panels do
+            if sender.ItemIndex == i-1 then
+                self.frm[Panels[i]].Visible = true
+            else
+                self.frm[Panels[i]].Visible = false
+            end
+        end
+    end
+
     self.frm.FUTCopyPlayerBtn.OnClick = function(sender)
         self:onFUTCopyPlayerBtnBtnClick(sender)
     end
@@ -5835,7 +6229,11 @@ function thisFormManager:assign_current_form_events()
     end
 
     self.frm.FUTChemStyleCB.OnChange = function(sender)
-        sender.Hint = sender.Items[sender.ItemIndex]
+        if sender.ItemIndex >= 0 then
+            sender.Hint = sender.Items[sender.ItemIndex]
+        else
+            sender.Hint = "ERROR"
+        end
 
         -- Labels on card
         local selected = self.frm.FUTPickPlayerListBox.ItemIndex + 1
@@ -5887,12 +6285,61 @@ function thisFormManager:assign_current_form_events()
         if FUT_API_PAGE < 1 then
             FUT_API_PAGE = 1
         end
+        self.frm.FUTPickPlayerListBox.clear()
         self:fut_search_player(self.frm.FindPlayerByNameFUTEdit.Text, FUT_API_PAGE)
     end
     self.frm.NextPage.OnClick = function(sender)
         FUT_API_PAGE = FUT_API_PAGE + 1
+        self.frm.FUTPickPlayerListBox.clear()
         self:fut_search_player(self.frm.FindPlayerByNameFUTEdit.Text, FUT_API_PAGE)
     end
+
+    self.frm.CopyCMFindPlayerByID.OnClick = function(sender)
+        self.cm_found_player_addr = 0
+        self.frm.CopyCMImage.Visible = false
+        sender.Text = ''
+    end
+
+    self.frm.CopyCMSearchPlayerByID.OnClick = function(sender)
+        self.cm_found_player_addr = 0
+        local playerid = tonumber(self.frm.CopyCMFindPlayerByID.Text)
+        if playerid == nil then 
+            self.frm.CopyCMImage.Visible = false
+            return 
+        end
+        self.cm_found_player_addr = self:find_player_by_id(playerid)
+        if not self.cm_found_player_addr or self.cm_found_player_addr <= 0 then
+            self.cm_found_player_addr = 0
+            self.frm.CopyCMImage.Visible = false
+            return
+        end
+        local ss_hs = self:load_headshot(
+            playerid, self.cm_found_player_addr
+        )
+        if self:safe_load_picture_from_ss(self.frm.CopyCMImage.Picture, ss_hs) then
+            ss_hs.destroy()
+            self.frm.CopyCMImage.Picture.stretch=true
+            self.frm.CopyCMImage.Visible = true
+        end
+    end
+
+
+    self.frm.CopyCMPlayerBtn.OnClick = function(sender)
+        self:onCMCopyPlayerBtnClick(sender)
+    end
+
+    self.frm.CopyCMPlayerBtn.OnMouseEnter = function(sender)
+        self:onBtnMouseEnter(sender)
+    end
+
+    self.frm.CopyCMPlayerBtn.OnMouseLeave = function(sender)
+        self:onBtnMouseLeave(sender)
+    end
+
+    self.frm.CopyCMPlayerBtn.OnPaint = function(sender)
+        self:onPaintButton(sender)
+    end
+
 end
 
 function thisFormManager:setup(params)
@@ -5915,6 +6362,7 @@ function thisFormManager:setup(params)
     self.frm.FindPlayerByID.Text = 'Find player by ID...'
     self.change_list = {}
     self.fut_found_players = nil
+    self.cm_found_player_addr = 0
     self:assign_current_form_events()
 end
 

@@ -92,9 +92,9 @@ function GameDBManager:find_record_addr(table_name, arr_flds, n_of_records_to_fi
         n_of_records_to_find = written_records + 1
     end
 
-    self.logger:debug(string.format("first_record: %X", first_record))
-    self.logger:debug(string.format("record_size: %d", record_size))
-    self.logger:debug(string.format("written_records: %d", written_records))
+    self.logger:debug(string.format("first_record: %X", first_record or 0))
+    self.logger:debug(string.format("record_size: %d", record_size or 0))
+    self.logger:debug(string.format("written_records: %d", written_records or 0))
 
     local row = 0
     local current_addr = first_record
