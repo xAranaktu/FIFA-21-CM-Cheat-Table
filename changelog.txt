@@ -133,6 +133,7 @@ v21.1.0.7:
         - Sharpness
         - Fitness
         - Injury
+
         - Release Clause
         - Squad Role
         - Wage
@@ -169,3 +170,12 @@ v21.1.1.0:
             - Always Best Grade
             - More efficient training
             - Training Everyday
+
+v21.1.1.1:
+    - Added:
+        - Teams Editor
+        - Option to hide players potential in players editor
+        - "Play As Player":
+            - Unlock Play Buttons
+        - "Other":
+            - Freeze Lineup
