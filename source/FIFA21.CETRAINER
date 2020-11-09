@@ -12,7 +12,7 @@
   <CheatEntries>
     <CheatEntry>
       <ID>0</ID>
-      <Description>"v21.1.0.9"</Description>
+      <Description>"v21.1.1.0"</Description>
       <LastState Value="" RealAddress="00000000"/>
       <Color>804000</Color>
       <GroupHeader>1</GroupHeader>
@@ -15105,7 +15105,6 @@ dealloc(newmem_alttab)
             <CheatEntry>
               <ID>4776</ID>
               <Description>"Transfer Budget"</Description>
-              <LastState Value="180496464" RealAddress="10F44AEC8"/>
               <VariableType>4 Bytes</VariableType>
               <Address>pScriptsBase</Address>
               <Offsets>
@@ -18135,6 +18134,502 @@ dealloc(PAP_NEW_OFFER_DATA)
                   <Description>"Wage"</Description>
                   <VariableType>4 Bytes</VariableType>
                   <Address>PAP_NEW_OFFER_DATA+C</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>4852</ID>
+              <Description>"Training"</Description>
+              <Options moHideChildren="1"/>
+              <LastState Value="" RealAddress="00000000"/>
+              <GroupHeader>1</GroupHeader>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>4856</ID>
+                  <Description>"Unlimited Training Sessions"</Description>
+                  <Options moHideChildren="1"/>
+                  <LastState/>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>{
+AUTHOR: Aranaktu
+
+GAME VERSION: Script should always work with newest version of the game which can be downloaded from Origin.
+
+RISK LEVEL: 0/5 (There is no chance that this script will harm your cm save.)
+
+DESCRIPTION:
+Unlimited training sessions in player career mode.
+
+HOW TO USE:
+Just activate the script and simulate training
+
+VIDEO TUTORIAL(S):
+- NONE
+}
+
+[ENABLE]
+//code from here to '[DISABLE]' will be used to enable the cheat
+{$lua}
+if syntaxcheck then return end
+onScriptActivate()
+
+INJECT_PAPUnlimitedTrainingSessions = gCTManager.memory_manager:get_validated_address('PAPUnlimitedTrainingSessions')
+ORG_PAPUnlimitedTrainingSessions = readBytes(INJECT_PAPUnlimitedTrainingSessions, 12, true)
+
+{$asm}
+
+alloc(newmem_PAPUnlimitedTrainingSessions, $500, $INJECT_PAPUnlimitedTrainingSessions)
+
+label(code_PAPUnlimitedTrainingSessions)
+label(ret_PAPUnlimitedTrainingSessions)
+label(exit_PAPUnlimitedTrainingSessions)
+label(clear_PAPUnlimitedTrainingSessions)
+
+newmem_PAPUnlimitedTrainingSessions:
+  mov ebx, 5
+  mov [r15+14], ebx
+  mov [r15+38], ebx
+  mov ebx, 7
+  mov [r15+3C], ebx
+
+code_PAPUnlimitedTrainingSessions:
+  mov rax,[r15+00000088]
+  cmp rax,[r15+00000090]
+  je exit_PAPUnlimitedTrainingSessions
+
+clear_PAPUnlimitedTrainingSessions:
+  mov byte ptr [rax+14],01
+  mov qword ptr [rax+0C],FFFFFFFF
+  mov [rax+18],FFFFFFFF
+  mov rcx,[rax+20]
+  mov [rax+28],rcx
+  add rax,40
+  cmp rax,[r15+00000090]
+  jne clear_PAPUnlimitedTrainingSessions
+  jmp exit_PAPUnlimitedTrainingSessions
+exit_PAPUnlimitedTrainingSessions:
+  mov ebx,[r15+38]
+  mov r15d,[r15+3C]
+
+  jmp ret_PAPUnlimitedTrainingSessions
+
+$INJECT_PAPUnlimitedTrainingSessions:
+  jmp newmem_PAPUnlimitedTrainingSessions
+  nop
+  nop
+  nop
+ret_PAPUnlimitedTrainingSessions:
+
+[DISABLE]
+//code_PAPUnlimitedTrainingSessions from here till the end of the code_PAPUnlimitedTrainingSessions will be used to disable the cheat
+{$lua}
+writeBytes(INJECT_PAPUnlimitedTrainingSessions, ORG_PAPUnlimitedTrainingSessions)
+{$asm}
+
+dealloc(newmem_PAPUnlimitedTrainingSessions)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "FIFA21.exe"+54B720A
+
+"FIFA21.exe"+54B71ED: 84 C0                 -  test al,al
+"FIFA21.exe"+54B71EF: 74 11                 -  je FIFA21.exe+54B7202
+"FIFA21.exe"+54B71F1: 48 8B CB              -  mov rcx,rbx
+"FIFA21.exe"+54B71F4: E8 A7 27 F7 FF        -  call FIFA21.exe+54299A0
+"FIFA21.exe"+54B71F9: 84 C0                 -  test al,al
+"FIFA21.exe"+54B71FB: 74 05                 -  je FIFA21.exe+54B7202
+"FIFA21.exe"+54B71FD: 40 B6 01              -  mov sil,01
+"FIFA21.exe"+54B7200: EB 03                 -  jmp FIFA21.exe+54B7205
+"FIFA21.exe"+54B7202: 40 32 F6              -  xor sil,sil
+"FIFA21.exe"+54B7205: 40 88 74 24 41        -  mov [rsp+41],sil
+// ---------- INJECTING HERE ----------
+"FIFA21.exe"+54B720A: 41 8B 5F 38           -  mov ebx,[r15+38]
+"FIFA21.exe"+54B720E: 45 8B 7F 3C           -  mov r15d,[r15+3C]
+// ---------- DONE INJECTING  ----------
+"FIFA21.exe"+54B7212: 49 8B 45 08           -  mov rax,[r13+08]
+"FIFA21.exe"+54B7216: 48 8B 80 78 0F 00 00  -  mov rax,[rax+00000F78]
+"FIFA21.exe"+54B721D: 48 8B 08              -  mov rcx,[rax]
+"FIFA21.exe"+54B7220: 48 63 41 14           -  movsxd  rax,dword ptr [rcx+14]
+"FIFA21.exe"+54B7224: 83 F8 FF              -  cmp eax,-01
+"FIFA21.exe"+54B7227: 74 0C                 -  je FIFA21.exe+54B7235
+"FIFA21.exe"+54B7229: 4C 8D 24 40           -  lea r12,[rax+rax*2]
+"FIFA21.exe"+54B722D: 49 C1 E4 08           -  shl r12,08
+"FIFA21.exe"+54B7231: 4C 03 61 18           -  add r12,[rcx+18]
+"FIFA21.exe"+54B7235: 4C 89 64 24 70        -  mov [rsp+70],r12
+}
+</AssemblerScript>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4853</ID>
+                  <Description>"Always Best Grade"</Description>
+                  <LastState/>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>{
+AUTHOR: Aranaktu
+
+GAME VERSION: Script should always work with newest version of the game which can be downloaded from Origin.
+
+RISK LEVEL: 0/5 (There is no chance that this script will harm your cm save.)
+
+DESCRIPTION:
+Get A grade on training sim in player career mode
+
+HOW TO USE:
+Just activate the script and simulate training
+
+VIDEO TUTORIAL(S):
+- NONE
+}
+
+[ENABLE]
+//code from here to '[DISABLE]' will be used to enable the cheat
+{$lua}
+if syntaxcheck then return end
+onScriptActivate()
+
+INJECT_PAPTrainingBestGrade = gCTManager.memory_manager:get_validated_address('PAPTrainingBestGrade')
+ORG_PAPTrainingBestGrade = readBytes(INJECT_PAPTrainingBestGrade, 12, true)
+
+{$asm}
+
+alloc(newmem_PAPTrainingBestGrade, $500, $INJECT_PAPTrainingBestGrade)
+
+label(code_PAPTrainingBestGrade)
+label(ret_PAPTrainingBestGrade)
+
+newmem_PAPTrainingBestGrade:
+  mov edx, 0
+  mov [rbx+000000B0], edx
+code_PAPTrainingBestGrade:
+  mov edx,[rbx+000000B0]
+  jmp ret_PAPTrainingBestGrade
+
+$INJECT_PAPTrainingBestGrade:
+  jmp newmem_PAPTrainingBestGrade
+  nop
+
+ret_PAPTrainingBestGrade:
+
+[DISABLE]
+//code_PAPTrainingBestGrade from here till the end of the code_PAPTrainingBestGrade will be used to disable the cheat
+{$lua}
+writeBytes(INJECT_PAPTrainingBestGrade, ORG_PAPTrainingBestGrade)
+{$asm}
+
+dealloc(newmem_PAPTrainingBestGrade)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "FIFA21.exe"+437E0DC
+
+"FIFA21.exe"+437E0B4: FF 10                    -  call qword ptr [rax]
+"FIFA21.exe"+437E0B6: 48 85 C0                 -  test rax,rax
+"FIFA21.exe"+437E0B9: 74 04                    -  je FIFA21.exe+437E0BF
+"FIFA21.exe"+437E0BB: 44 8B 70 54              -  mov r14d,[rax+54]
+"FIFA21.exe"+437E0BF: 48 8D 43 08              -  lea rax,[rbx+08]
+"FIFA21.exe"+437E0C3: F3 0F 10 05 6D 02 FE 02  -  movss xmm0,[FIFA21.exe+735E338]
+"FIFA21.exe"+437E0CB: F3 0F 11 44 24 28        -  movss [rsp+28],xmm0
+"FIFA21.exe"+437E0D1: 48 89 44 24 20           -  mov [rsp+20],rax
+"FIFA21.exe"+437E0D6: 4C 8B CE                 -  mov r9,rsi
+"FIFA21.exe"+437E0D9: 45 8B C6                 -  mov r8d,r14d
+// ---------- INJECTING HERE ----------
+"FIFA21.exe"+437E0DC: 8B 93 B0 00 00 00        -  mov edx,[rbx+000000B0]
+// ---------- DONE INJECTING  ----------
+"FIFA21.exe"+437E0E2: 48 8B CD                 -  mov rcx,rbp
+"FIFA21.exe"+437E0E5: E8 96 01 00 00           -  call FIFA21.exe+437E280
+"FIFA21.exe"+437E0EA: 49 8B D7                 -  mov rdx,r15
+"FIFA21.exe"+437E0ED: 48 8B CD                 -  mov rcx,rbp
+"FIFA21.exe"+437E0F0: E8 9B F3 FF FF           -  call FIFA21.exe+437D490
+"FIFA21.exe"+437E0F5: 48 8B 05 44 82 B5 03     -  mov rax,[FIFA21.exe+7ED6340]
+"FIFA21.exe"+437E0FC: BA 69 B2 ED 0C           -  mov edx,0CEDB269
+"FIFA21.exe"+437E101: 48 8D 0D 38 82 B5 03     -  lea rcx,[FIFA21.exe+7ED6340]
+"FIFA21.exe"+437E108: FF 50 30                 -  call qword ptr [rax+30]
+"FIFA21.exe"+437E10B: 48 8B C8                 -  mov rcx,rax
+}
+</AssemblerScript>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4854</ID>
+                  <Description>"More efficient training"</Description>
+                  <Options moHideChildren="1"/>
+                  <LastState/>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>{
+AUTHOR: Aranaktu
+
+GAME VERSION: Script should always work with newest version of the game which can be downloaded from Origin.
+
+RISK LEVEL: 0/5 (There is no chance that this script will harm your cm save.)
+
+DESCRIPTION:
+Get A grade on training sim in player career mode
+
+HOW TO USE:
+Just activate the script and simulate training
+
+VIDEO TUTORIAL(S):
+- NONE
+}
+
+[ENABLE]
+//code from here to '[DISABLE]' will be used to enable the cheat
+{$lua}
+if syntaxcheck then return end
+onScriptActivate()
+
+INJECT_PAPMoreEfficientTraining = gCTManager.memory_manager:get_validated_address('PAPMoreEfficientTraining')
+ORG_PAPMoreEfficientTraining = readBytes(INJECT_PAPMoreEfficientTraining, 12, true)
+
+{$asm}
+
+alloc(newmem_PAPMoreEfficientTraining, $500, $INJECT_PAPMoreEfficientTraining)
+
+label(code_PAPMoreEfficientTraining)
+label(ret_PAPMoreEfficientTraining)
+
+// Training result multiplier
+alloc(fPAPTrainingMultiplier, 8, $INJECT_PAPMoreEfficientTraining)
+registersymbol(fPAPTrainingMultiplier)
+fPAPTrainingMultiplier:
+db 00 00 40 40
+
+newmem_PAPMoreEfficientTraining:
+  mov [rsi+C], #9999  // ATTRIBUTE_GROWTH_CAP
+  movd xmm3,[rsi+1C]
+code_PAPMoreEfficientTraining:
+  mulss xmm3, dword ptr [fPAPTrainingMultiplier]
+
+  jmp ret_PAPMoreEfficientTraining
+
+$INJECT_PAPMoreEfficientTraining:
+  jmp newmem_PAPMoreEfficientTraining
+
+ret_PAPMoreEfficientTraining:
+
+[DISABLE]
+//code_PAPMoreEfficientTraining from here till the end of the code_PAPMoreEfficientTraining will be used to disable the cheat
+{$lua}
+writeBytes(INJECT_PAPMoreEfficientTraining, ORG_PAPMoreEfficientTraining)
+{$asm}
+
+dealloc(newmem_PAPMoreEfficientTraining)
+unregistersymbol(fPAPTrainingMultiplier)
+dealloc(fPAPTrainingMultiplier)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "FIFA21.exe"+437E433
+
+"FIFA21.exe"+437E407: EB 81                       -  jmp FIFA21.exe+437E38A
+"FIFA21.exe"+437E409: 4B 8D 04 49                 -  lea rax,[r9+r9*2]
+"FIFA21.exe"+437E40D: F3 41 0F 10 64 83 08        -  movss xmm4,[r11+rax*4+08]
+"FIFA21.exe"+437E414: 44 8B 44 24 20              -  mov r8d,[rsp+20]
+"FIFA21.exe"+437E419: 48 8B CE                    -  mov rcx,rsi
+"FIFA21.exe"+437E41C: 8B 54 24 24                 -  mov edx,[rsp+24]
+"FIFA21.exe"+437E420: 8B 5D 08                    -  mov ebx,[rbp+08]
+"FIFA21.exe"+437E423: E8 18 AF 06 00              -  call FIFA21.exe+43E9340
+"FIFA21.exe"+437E428: 48 63 84 24 C8 00 00 00     -  movsxd  rax,dword ptr [rsp+000000C8]
+"FIFA21.exe"+437E430: 8D 4B FF                    -  lea ecx,[rbx-01]
+// ---------- INJECTING HERE ----------
+"FIFA21.exe"+437E433: 66 0F 6E 5E 1C              -  movd xmm3,[rsi+1C]
+// ---------- DONE INJECTING  ----------
+"FIFA21.exe"+437E438: 45 33 DB                    -  xor r11d,r11d
+"FIFA21.exe"+437E43B: 0F 5B DB                    -  cvtdq2ps xmm3,xmm3
+"FIFA21.exe"+437E43E: 4C 63 C1                    -  movsxd  r8,ecx
+"FIFA21.exe"+437E441: 41 8B CB                    -  mov ecx,r11d
+"FIFA21.exe"+437E444: F3 0F 59 9C 86 44 03 00 00  -  mulss xmm3,[rsi+rax*4+00000344]
+"FIFA21.exe"+437E44D: 48 63 84 24 D0 00 00 00     -  movsxd  rax,dword ptr [rsp+000000D0]
+"FIFA21.exe"+437E455: F3 0F 59 9C 86 58 03 00 00  -  mulss xmm3,[rsi+rax*4+00000358]
+"FIFA21.exe"+437E45E: F3 0F 59 9C BE 64 03 00 00  -  mulss xmm3,[rsi+rdi*4+00000364]
+"FIFA21.exe"+437E467: F3 0F 59 DC                 -  mulss xmm3,xmm4
+"FIFA21.exe"+437E46B: F3 0F 59 C3                 -  mulss xmm0,xmm3
+}
+</AssemblerScript>
+                  <CheatEntries>
+                    <CheatEntry>
+                      <ID>4855</ID>
+                      <Description>"Multiplier"</Description>
+                      <VariableType>Float</VariableType>
+                      <Address>fPAPTrainingMultiplier</Address>
+                    </CheatEntry>
+                  </CheatEntries>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>4857</ID>
+                  <Description>"Training Everyday"</Description>
+                  <Options moHideChildren="1"/>
+                  <LastState/>
+                  <VariableType>Auto Assembler Script</VariableType>
+                  <AssemblerScript>{
+AUTHOR: Aranaktu
+
+GAME VERSION: Script should always work with newest version of the game which can be downloaded from Origin.
+
+RISK LEVEL: 1/5 (Very small chance that this script will harm your cm save.)
+
+DESCRIPTION:
+This script allows you to perfmorm training sessions everyday instead of one session per 7 days.
+
+HOW TO USE:
+  1. Activate script
+  2. Advance to next day in game
+  3. Training sessinos should refresh.
+
+VIDEO TUTORIAL(S):
+- NONE
+}
+
+[ENABLE]
+//code from here to '[DISABLE]' will be used to enable the cheat
+{$lua}
+if syntaxcheck then return end
+onScriptActivate()
+
+INJECT_PAPTrainingEveryday = gCTManager.memory_manager:get_validated_address('PAPTrainingEveryday')
+ORG_PAPTrainingEveryday = readBytes(INJECT_PAPTrainingEveryday, 12, true)
+
+INJECT_PAPIgnoreDayWithMatch = gCTManager.memory_manager:get_validated_address('PAPIgnoreDayWithMatch')
+ORG_PAPIgnoreDayWithMatch = readBytes(INJECT_PAPIgnoreDayWithMatch, 12, true)
+
+{$asm}
+
+alloc(newmem_PAPTrainingEveryday, $500, $INJECT_PAPTrainingEveryday)
+
+label(code_PAPTrainingEveryday)
+label(ret_PAPTrainingEveryday)
+label(exit_PAPTrainingEveryday)
+label(clear_PAPTrainingEveryday)
+
+newmem_PAPTrainingEveryday:
+  push r14
+  push rbx
+  pushf
+  xor rbx, rbx
+  xor r14, r14
+  
+code_PAPTrainingEveryday:
+  mov ebx, 5
+  mov [rdi+14], ebx
+  mov [rdi+38], ebx
+  mov ebx, 7
+  mov [rdi+3C], ebx
+
+  mov r14,[rdi+00000088]
+  cmp r14,[rdi+00000090]
+  je exit_PAPTrainingEveryday
+  
+clear_PAPTrainingEveryday:
+  mov byte ptr [r14+14],01
+  mov qword ptr [r14+0C],FFFFFFFF
+  mov [r14+18],FFFFFFFF
+  mov rcx,[r14+20]
+  mov [r14+28],rcx
+  add r14,40
+  cmp r14,[rdi+00000090]
+  jne clear_PAPTrainingEveryday
+  jmp exit_PAPTrainingEveryday
+exit_PAPTrainingEveryday:
+  popf
+  pop rbx
+  pop r14
+
+  mov rbx,[rsp+48]
+  mov rsi,[rsp+50]
+  add rsp, 30
+  pop rdi
+  ret
+
+$INJECT_PAPTrainingEveryday:
+  jmp newmem_PAPTrainingEveryday
+  nop
+  nop
+  nop
+  nop
+  nop
+ret_PAPTrainingEveryday:
+
+alloc(newmem_PAPIgnoreDayWithMatch, $500, $INJECT_PAPIgnoreDayWithMatch)
+
+label(code_PAPIgnoreDayWithMatch)
+label(ret_PAPIgnoreDayWithMatch)
+
+newmem_PAPIgnoreDayWithMatch:
+  mov rcx,rsi
+  call qword ptr [rax+20]
+  xor eax, eax
+code_PAPIgnoreDayWithMatch:
+  jmp ret_PAPIgnoreDayWithMatch
+
+$INJECT_PAPIgnoreDayWithMatch:
+  jmp newmem_PAPIgnoreDayWithMatch
+  nop
+ret_PAPIgnoreDayWithMatch:
+
+[DISABLE]
+//code_PAPTrainingEveryday from here till the end of the code_PAPTrainingEveryday will be used to disable the cheat
+{$lua}
+writeBytes(INJECT_PAPTrainingEveryday, ORG_PAPTrainingEveryday)
+writeBytes(INJECT_PAPIgnoreDayWithMatch, ORG_PAPIgnoreDayWithMatch)
+{$asm}
+
+dealloc(newmem_PAPTrainingEveryday)
+dealloc(newmem_PAPIgnoreDayWithMatch)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "FIFA21.exe"+5848FC0
+
+"FIFA21.exe"+5848F9A: E8 E1 6A 4C FF           -  call FIFA21.exe+4D0FA80
+"FIFA21.exe"+5848F9F: B9 07 00 00 00           -  mov ecx,00000007
+"FIFA21.exe"+5848FA4: 2B C8                    -  sub ecx,eax
+"FIFA21.exe"+5848FA6: 89 4F 3C                 -  mov [rdi+3C],ecx
+"FIFA21.exe"+5848FA9: 48 8B CF                 -  mov rcx,rdi
+"FIFA21.exe"+5848FAC: 48 8B 5C 24 48           -  mov rbx,[rsp+48]
+"FIFA21.exe"+5848FB1: 48 8B 74 24 50           -  mov rsi,[rsp+50]
+"FIFA21.exe"+5848FB6: 48 83 C4 30              -  add rsp,30
+"FIFA21.exe"+5848FBA: 5F                       -  pop rdi
+"FIFA21.exe"+5848FBB: E9 B0 20 00 00           -  jmp FIFA21.exe+584B070
+// ---------- INJECTING HERE ----------
+"FIFA21.exe"+5848FC0: 83 6F 3C 01              -  sub dword ptr [rdi+3C],01
+"FIFA21.exe"+5848FC4: 0F 89 21 03 00 00        -  jns FIFA21.exe+58492EB
+// ---------- DONE INJECTING  ----------
+"FIFA21.exe"+5848FCA: B9 07 00 00 00           -  mov ecx,00000007
+"FIFA21.exe"+5848FCF: 89 4F 3C                 -  mov [rdi+3C],ecx
+"FIFA21.exe"+5848FD2: 48 8B 5C 24 48           -  mov rbx,[rsp+48]
+"FIFA21.exe"+5848FD7: 48 8B 74 24 50           -  mov rsi,[rsp+50]
+"FIFA21.exe"+5848FDC: 48 83 C4 30              -  add rsp,30
+"FIFA21.exe"+5848FE0: 5F                       -  pop rdi
+"FIFA21.exe"+5848FE1: C3                       -  ret 
+"FIFA21.exe"+5848FE2: 8B 47 14                 -  mov eax,[rdi+14]
+"FIFA21.exe"+5848FE5: B9 07 00 00 00           -  mov ecx,00000007
+"FIFA21.exe"+5848FEA: 89 4F 3C                 -  mov [rdi+3C],ecx
+}
+
+{
+// ORIGINAL CODE - INJECTION POINT: "FIFA21.exe"+54B8152
+
+"FIFA21.exe"+54B812B: FF 44 24 58                 -  inc [rsp+58]
+"FIFA21.exe"+54B812F: 48 8B 1B                    -  mov rbx,[rbx]
+"FIFA21.exe"+54B8132: 49 3B DE                    -  cmp rbx,r14
+"FIFA21.exe"+54B8135: 74 11                       -  je FIFA21.exe+54B8148
+"FIFA21.exe"+54B8137: 4C 8B 44 24 50              -  mov r8,[rsp+50]
+"FIFA21.exe"+54B813C: 44 8B 4C 24 48              -  mov r9d,[rsp+48]
+"FIFA21.exe"+54B8141: 48 8B 4C 24 40              -  mov rcx,[rsp+40]
+"FIFA21.exe"+54B8146: EB A8                       -  jmp FIFA21.exe+54B80F0
+"FIFA21.exe"+54B8148: 48 8B 06                    -  mov rax,[rsi]
+"FIFA21.exe"+54B814B: 48 8D 15 76 0F E4 01        -  lea rdx,[FIFA21.exe+72F90C8]
+// ---------- INJECTING HERE ----------
+"FIFA21.exe"+54B8152: 48 8B CE                    -  mov rcx,rsi
+"FIFA21.exe"+54B8155: FF 50 20                    -  call qword ptr [rax+20]
+// ---------- DONE INJECTING  ----------
+"FIFA21.exe"+54B8158: 85 C0                       -  test eax,eax
+"FIFA21.exe"+54B815A: 0F 95 C0                    -  setne al
+"FIFA21.exe"+54B815D: 84 C0                       -  test al,al
+"FIFA21.exe"+54B815F: 75 19                       -  jne FIFA21.exe+54B817A
+"FIFA21.exe"+54B8161: 48 8B 06                    -  mov rax,[rsi]
+"FIFA21.exe"+54B8164: 48 8D 15 75 F0 E3 01        -  lea rdx,[FIFA21.exe+72F71E0]
+"FIFA21.exe"+54B816B: 48 8B CE                    -  mov rcx,rsi
+"FIFA21.exe"+54B816E: FF 50 20                    -  call qword ptr [rax+20]
+"FIFA21.exe"+54B8171: 85 C0                       -  test eax,eax
+"FIFA21.exe"+54B8173: 74 05                       -  je FIFA21.exe+54B817A
+}
+</AssemblerScript>
                 </CheatEntry>
               </CheatEntries>
             </CheatEntry>
@@ -23545,7 +24040,7 @@ dealloc(newmem_disable_pgm)
   <UserdefinedSymbols>
     <SymbolEntry>
       <Name>pScriptsBase</Name>
-      <Address>163030000</Address>
+      <Address>13FFD0000</Address>
     </SymbolEntry>
     <SymbolEntry>
       <Name>arrNeverTiredPlayerIDs</Name>
@@ -23553,7 +24048,7 @@ dealloc(newmem_disable_pgm)
     </SymbolEntry>
     <SymbolEntry>
       <Name>funcGenReport</Name>
-      <Address>163030030</Address>
+      <Address>13FFD0030</Address>
     </SymbolEntry>
     <SymbolEntry>
       <Name>bNewReport</Name>
@@ -23565,11 +24060,11 @@ dealloc(newmem_disable_pgm)
     </SymbolEntry>
     <SymbolEntry>
       <Name>pScoutMgr</Name>
-      <Address>163030020</Address>
+      <Address>13FFD0020</Address>
     </SymbolEntry>
     <SymbolEntry>
       <Name>pCareerModeSmth</Name>
-      <Address>163030010</Address>
+      <Address>13FFD0010</Address>
     </SymbolEntry>
   </UserdefinedSymbols>
   <LuaScript>-- Hello!

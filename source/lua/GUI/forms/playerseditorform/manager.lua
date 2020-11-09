@@ -361,8 +361,8 @@ function thisFormManager:update_cached_field(playerid, field_name, new_value)
         "gkkicking",
         "gkreflexes",
         "gkpositioning",
-        "attackingworkrate",
         "defensiveworkrate",
+        "attackingworkrate",
         "weakfootabilitytypecode",
         "skillmoves"
     }
@@ -3296,6 +3296,7 @@ function thisFormManager:get_player_fitness_addr(playerid)
     if not player_found then
         return 0
     end
+    self.logger:debug(string.format("Player Fitness found at: %X", current_addr))
     return current_addr
 end
 

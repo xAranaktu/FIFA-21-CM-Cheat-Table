@@ -88,6 +88,10 @@ function GameDBManager:find_record_addr(table_name, arr_flds, n_of_records_to_fi
     local record_size = self.tables[table_name]["record_size"]
     local written_records = self.tables[table_name]["written_records"]
 
+    if not written_records then
+        self.logger:error(string.format("No written records for: %s", table_name))
+    end
+
     if n_of_records_to_find == nil then
         n_of_records_to_find = written_records + 1
     end
