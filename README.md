@@ -5,6 +5,7 @@
 
 ***
 [What is Cheat Table?](https://en.wikipedia.org/wiki/Cheat_Engine#Cheat_Tables)
+
 "Cheat Tables" is a file format used by Cheat Engine to store data such as cheat addresses, scripts including Lua scripts and code locations
 
 I recommend to use [Cheat Engine 6.8.1](https://mega.nz/file/JEtTTCiD#h-Py9TT5OhuJkvGq7-Sd96UaD14QA62MRfVvc30Iy8A) for the FIFA 21 cheat table.
@@ -20,6 +21,8 @@ For example you can edit players (potential, attributes, name etc.), transfer bu
 
 ***
 ![](https://i.imgur.com/7MrImEO.png)
+
+
 This cheat table has also an graphical user interface (GUI) which makes editing a little bit easier for inexperienced users.
 
 ***
