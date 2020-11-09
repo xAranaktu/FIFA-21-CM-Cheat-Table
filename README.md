@@ -41,6 +41,7 @@ This cheat table has also an graphical user interface (GUI) which makes editing 
 ***
 ### Useful links
 * [Wiki](https://github.com/xAranaktu/FIFA-21-CM-Cheat-Table/wiki)
+* [Video Tutorials](https://www.youtube.com/playlist?list=PLUdOQC_o5fVAG4jf2Cf-qjV4ta59Dwj67)
 * [Timeline](https://timelines.gitkraken.com/timeline/ea4c326a350b42239fd93353704bf45d)
 * [Kanban board](https://app.gitkraken.com/glo/board/X2y2DHXMggASx-4e)
 * [FIFA 21 IDs](https://docs.google.com/spreadsheets/d/13OGH_owsdChC52PflHv1SsqfBnFIJLu81kALHKOxl_g/edit?usp=sharing)
