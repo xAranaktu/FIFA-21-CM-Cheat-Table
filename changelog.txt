@@ -187,3 +187,10 @@ v21.1.1.2:
     - Added to "Manager":
         - Manager Never Retire
         - Manager Rating - 99
+
+v21.1.1.3:
+    - Fixed:
+        - Youth Academy:
+            - 15 Players per report
+    - Added to "Non-CM Related":
+        - "Game Settigs" -> "Camera"
