@@ -90,6 +90,7 @@ function GameDBManager:find_record_addr(table_name, arr_flds, n_of_records_to_fi
 
     if not written_records then
         self.logger:error(string.format("No written records for: %s", table_name))
+        return {}
     end
 
     if n_of_records_to_find == nil then
@@ -122,6 +123,7 @@ function GameDBManager:find_record_addr(table_name, arr_flds, n_of_records_to_fi
             local fld = arr_flds[j]
             local expr = fld["expr"]
             local values = fld["values"]
+            local is_string = fld["is_string"]
 
             local fld_val = self:get_table_record_field_value(
                 current_addr, table_name, fld["name"]
@@ -129,9 +131,17 @@ function GameDBManager:find_record_addr(table_name, arr_flds, n_of_records_to_fi
 
             for k=1, #values do
                 local v = values[k]
-                if expr == "eq" then
-                    if fld_val == v then
+                if is_string then
+                    fld_val = string.lower(fld_val)
+                    v = string.lower(v)
+                    if string.match(fld_val, v) then
                         table.insert(result, current_addr)
+                    end
+                else
+                    if expr == "eq" then
+                        if fld_val == v then
+                            table.insert(result, current_addr)
+                        end
                     end
                 end
             end
@@ -164,16 +174,25 @@ function GameDBManager:get_table_record_field_value(record_addr, table_name, fie
         self.logger:error(string.format("get_table_record_field_value. %s no meta", table_name))
     end
 
+    local result = nil
+
     local meta_idx = DB_TABLES_META_MAP[table_name][fieldname]
     local fld_desc = DB_TABLES_META[table_name][meta_idx]
+    local fld_type = fld_desc["fld_type"]
 
-    local v = readInteger(record_addr + fld_desc["offset"])
-    local a = bShr(v, fld_desc["startbit"])
-    local b = bShl(1, fld_desc["depth"]) - 1
-    local result = bAnd(a,b)
+    if fld_type == "DBOFIELDTYPE_INTEGER" or fld_type == "DBOFIELDTYPE_DATE" then
+        local v = readInteger(record_addr + fld_desc["offset"])
+        local a = bShr(v, fld_desc["startbit"])
+        local b = bShl(1, fld_desc["depth"]) - 1
+        result = bAnd(a,b)
 
-    if not raw then
-        result = result + fld_desc["rangelow"]
+        if not raw then
+            result = result + fld_desc["rangelow"]
+        end
+    elseif fld_type == "DBOFIELDTYPE_STRING" then
+        result = readString(record_addr + fld_desc["offset"])
+    else
+        self.logger:critical(string.format("TODO, get_table_record_field_value handle: %s", fld_type))
     end
 
     return result
@@ -183,37 +202,65 @@ function GameDBManager:set_table_record_field_value(record_addr, table_name, fie
     if raw == nil then raw = false end
     local meta_idx = DB_TABLES_META_MAP[table_name][fieldname]
     local fld_desc = DB_TABLES_META[table_name][meta_idx]
+    local fld_type = fld_desc["fld_type"]
 
     local addr = record_addr + fld_desc["offset"]
-    local v = readInteger(addr)
-    --self.logger:debug(string.format("writeval: %d", v))
-    local startbit = fld_desc["startbit"]
-    local depth = fld_desc["depth"]-1
-    --self.logger:debug(string.format("Startbit: %d", startbit))
-    --self.logger:debug(string.format("depth: %d", depth))
-
-    --self.logger:debug(string.format("new_value: %d", new_value))
-    if not raw then
-        new_value = new_value - fld_desc["rangelow"]
-    end
-    for i=0, depth do
-        --self.logger:debug(string.format("i: %d", i))
-        local currentbit = startbit + i
-        --self.logger:debug(string.format("currentbit: %d", currentbit))
-        local is_set = bAnd(bShr(new_value, i), 1)
-        --self.logger:debug(string.format("is_set: %d", is_set))
-
-        if is_set == 1 then
-            v = bOr(v, bShl(1, currentbit))
-            --self.logger:debug(string.format("v is set: %d", v))
-        else
-            v = bAnd(v, bNot(bShl(1, currentbit)))
-            --self.logger:debug(string.format("v not: %d", v))
+    if fld_type == "DBOFIELDTYPE_INTEGER" or fld_type == "DBOFIELDTYPE_DATE" or fld_type == "DBOFIELDTYPE_REAL" then
+        if type(new_value) == "string" then
+            new_value = tonumber(new_value)
         end
-    end
-    --self.logger:debug(string.format("writeval: %d", v))
 
-    writeInteger(addr, v)
+        -- Interpete float as integer
+        if fld_type == "DBOFIELDTYPE_REAL" then
+            new_value = new_value + .0
+            writeFloat("magic_fldtype_real", new_value)
+            new_value = readInteger("magic_fldtype_real")
+        end
+
+        local v = readInteger(addr)
+        --self.logger:debug(string.format("writeval: %d", v))
+        local startbit = fld_desc["startbit"]
+        local depth = fld_desc["depth"]-1
+        --self.logger:debug(string.format("Startbit: %d", startbit))
+        --self.logger:debug(string.format("depth: %d", depth))
+
+        --self.logger:debug(string.format("new_value: %d", new_value))
+        if not raw then
+            new_value = new_value - fld_desc["rangelow"]
+        end
+        for i=0, depth do
+            --self.logger:debug(string.format("i: %d", i))
+            local currentbit = startbit + i
+            --self.logger:debug(string.format("currentbit: %d", currentbit))
+            local is_set = bAnd(bShr(new_value, i), 1)
+            --self.logger:debug(string.format("is_set: %d", is_set))
+
+            if is_set == 1 then
+                v = bOr(v, bShl(1, currentbit))
+                --self.logger:debug(string.format("v is set: %d", v))
+            else
+                v = bAnd(v, bNot(bShl(1, currentbit)))
+                --self.logger:debug(string.format("v not: %d", v))
+            end
+        end
+        --self.logger:debug(string.format("writeval: %d", v))
+
+        writeInteger(addr, v)
+    elseif fld_type == "DBOFIELDTYPE_STRING" then
+        local string_max_len = math.floor(fld_desc["depth"] / 8)
+        local new_val_len = string.len(new_value)
+        if new_val_len > string_max_len then
+            new_value = new_value:sub(1, new_val_len - string_max_len)
+            new_val_len = string.len(new_value)
+        end
+        writeString(addr, new_value)
+        -- fill with null bytes
+        for i=new_val_len, string_max_len-1 do
+            writeBytes(addr+i, 0)
+        end
+    else
+        self.logger:critical(string.format("TODO, set_table_record_field_value handle: %s", fld_type))
+    end
 end
 
 

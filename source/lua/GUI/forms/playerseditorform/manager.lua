@@ -12,8 +12,6 @@ function thisFormManager:new(o)
     self.__index = self
     
     self.dirs = nil
-    self.cfg = nil
-    self.new_cfg = nil
     self.logger = nil
 
     self.frm = nil
@@ -22,11 +20,7 @@ function thisFormManager:new(o)
     self.game_db_manager = nil
     self.memory_manager = nil
 
-    self.addr_list = nil
-    self.fnSaveCfg = nil
-    self.new_cfg = {}
     self.has_unsaved_changes = false
-    self.selection_idx = 0
 
     self.fill_timer = nil
     self.form_components_description = nil
@@ -102,31 +96,6 @@ function thisFormManager:find_player_club_team_record(playerid)
 
     self.logger:warning(string.format("No club teams for playerid: %d", playerid))
     return 0
-end
-
-function thisFormManager:find_player_by_id(playerid)
-    if type(playerid) == 'string' then
-        playerid = tonumber(playerid)
-    end
-
-    local arr_flds = {
-        {
-            name = "playerid",
-            expr = "eq",
-            values = {playerid}
-        }
-    }
-
-    local addr = self.game_db_manager:find_record_addr(
-        "players", arr_flds, 1 
-    )
-    for i=1, #addr do
-        self.logger:debug(string.format("found: %X", addr[i]))
-    end
-
-    writeQword("pPlayersTableCurrentRecord", addr[1])
-
-    return addr[1]
 end
 
 function thisFormManager:update_total_stats()
@@ -677,8 +646,7 @@ function thisFormManager:get_components_description()
     end
 
     local fnCommonDBValGetter = function(addrs, table_name, field_name, raw)
-        local addr = addrs[table_name]
-        return self.game_db_manager:get_table_record_field_value(addr, table_name, field_name, raw)
+        return self:fnCommonDBValGetter(addrs, table_name, field_name, raw)
     end
 
     local AttributesTrackBarOnChange = function(sender)
@@ -2917,33 +2885,6 @@ function thisFormManager:get_components_description()
     return components_description
 end
 
-function thisFormManager:TabClick(sender)
-    if self.frm[self.tab_panel_map[sender.Name]].Visible then return end
-
-    for key,value in pairs(self.tab_panel_map) do
-        if key == sender.Name then
-            sender.Color = '0x001D1618'
-            self.frm[value].Visible = true
-        else
-            self.frm[key].Color = '0x003F2F34'
-            self.frm[value].Visible = false
-        end
-    end
-
-end
-
-function thisFormManager:TabMouseEnter(sender)
-    if self.frm[self.tab_panel_map[sender.Name]].Visible then return end
-
-    sender.Color = '0x00271D20'
-end
-
-function thisFormManager:TabMouseLeave(sender)
-    if self.frm[self.tab_panel_map[sender.Name]].Visible then return end
-
-    sender.Color = '0x003F2F34'
-end
-
 function thisFormManager:onShow(sender)
     self.logger:debug(string.format("onShow: %s", self.name))
 
@@ -3130,6 +3071,10 @@ function thisFormManager:fill_form(addrs, playerid)
         ::continue::
     end
 
+    if gCTManager.cfg.flags.hide_players_potential then
+        self.frm.PotentialEdit.Text = "HIDDEN"
+    end
+
     self.logger:debug("Update trackbars")
     local trackbars = {
         'AttackTrackBar',
@@ -3151,7 +3096,6 @@ function thisFormManager:fill_form(addrs, playerid)
         ss_hs.destroy()
         self.frm.Headshot.Picture.stretch=true
     end
-
     local team_record = self:find_player_club_team_record(playerid)
     local teamid = 0
     if team_record > 0 then
@@ -3258,7 +3202,7 @@ function thisFormManager:fill_form(addrs, playerid)
     end
 
     self.has_unsaved_changes = false
-    self.logger:debug(string.format("fill_form done", self.name))
+    self.logger:debug(string.format("fill_form %s done", self.name))
 end
 
 function thisFormManager:get_player_fitness_addr(playerid)
@@ -4115,7 +4059,11 @@ end
 
 
 function thisFormManager:onApplyChangesBtnClick()
-    self.logger:info("Apply Changes")
+    self.logger:info("Apply Changes player")
+
+    if gCTManager.cfg.flags.hide_players_potential then
+        self.change_list["PotentialEdit"] = nil
+    end
 
     self.logger:debug("Iterate change_list")
     for key, value in pairs(self.change_list) do
@@ -6344,7 +6292,6 @@ function thisFormManager:assign_current_form_events()
 end
 
 function thisFormManager:setup(params)
-    self.cfg = params.cfg
     self.logger = params.logger
     self.frm = params.frm_obj
     self.name = params.name

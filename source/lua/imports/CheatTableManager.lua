@@ -10,6 +10,8 @@ local GameDBManager = require 'lua/imports/GameDBManager';
 local mainFormManager = require 'lua/GUI/forms/mainform/manager';
 local settingsFormManager = require 'lua/GUI/forms/settingsform/manager';
 local playersEditorFormManager = require 'lua/GUI/forms/playerseditorform/manager';
+local teamsEditorFormManager = require 'lua/GUI/forms/teamseditorform/manager';
+local findteamFormManager = require 'lua/GUI/forms/findteamform/manager';
 
 local TableManager = {}
 
@@ -190,6 +192,14 @@ function TableManager:get_forms_map()
         playerseditor_form = {
             mgr = playersEditorFormManager,
             frm = PlayersEditorForm
+        },
+        teamseditor_form = {
+            mgr = teamsEditorFormManager,
+            frm = TeamsEditorForm
+        },
+        findteam_form = {
+            mgr = findteamFormManager,
+            frm = FindTeamForm
         }
     }
 end
@@ -209,6 +219,13 @@ function TableManager:setup_forms()
     playersEditorFormManager.dirs = dirs_cpy
     playersEditorFormManager.game_db_manager = self.game_db_manager
     playersEditorFormManager.memory_manager = self.memory_manager
+
+    teamsEditorFormManager.dirs = dirs_cpy
+    teamsEditorFormManager.game_db_manager = self.game_db_manager
+    teamsEditorFormManager.memory_manager = self.memory_manager
+
+    findteamFormManager.game_db_manager = self.game_db_manager
+    findteamFormManager.memory_manager = self.memory_manager
 
     for k, v in pairs(forms_map) do
         self.form_managers[k] = v.mgr
@@ -340,7 +357,8 @@ function TableManager:init_ptrs()
     -- local two = gCTManager.memory_manager:read_multilevel_pointer(readPointer(base_ptr), {0x10, 0x3C0})
     -- local three = gCTManager.memory_manager:read_multilevel_pointer(readPointer(base_ptr), {0x10, 0x3F0})
     -- local bruteforce_find = {
-    --     "pUsersTableFirstRecord"
+    --     "pDefaultteamsheetsTableFirstRecord",
+    --     "pDefaultmentalitiesTableFirstRecord"
     -- }
 
     
@@ -421,6 +439,18 @@ function TableManager:init_ptrs()
     )
 
     self.game_db_manager:add_table(
+        "default_teamsheets",
+        self.memory_manager:read_multilevel_pointer(DB_One_Tables_ptr, {0x120, 0x28}),
+        {"pDefaultteamsheetsTableCurrentRecord", "pDefaultteamsheetsTableFirstRecord"}
+    )
+
+    self.game_db_manager:add_table(
+        "default_mentalities",
+        self.memory_manager:read_multilevel_pointer(DB_One_Tables_ptr, {0x178, 0x28}),
+        {"pDefaultmentalitiesTableCurrentRecord", "pDefaultmentalitiesTableFirstRecord"}
+    )
+
+    self.game_db_manager:add_table(
         "career_calendar",
         self.memory_manager:read_multilevel_pointer(DB_Two_Tables_ptr, {0xB8, 0x28}),
         {"pCareerCalendarTableCurrentRecord", "pCareerCalendarTableFirstRecord"}
@@ -437,6 +467,8 @@ function TableManager:init_ptrs()
         self.memory_manager:read_multilevel_pointer(DB_Two_Tables_ptr, {0x50, 0x28}),
         {"pUsersTableCurrentRecord", "pUsersTableFirstRecord"}
     )
+
+    
 
     local base_ptr2 = self.memory_manager:get_validated_resolved_ptr("pScriptsBase", 3) or 0
     self.logger:debug(string.format("pScriptsBase %X", base_ptr2))
@@ -494,8 +526,6 @@ function TableManager:init_ptrs()
         -- 0x19a8 end
         self.logger:debug(string.format("fitness_manager_ptr %X", fitness_manager_ptr or 0))
     end
-    
-
 end
 
 function TableManager:autoactivate_scripts()
@@ -552,7 +582,7 @@ function TableManager:save_cfg(cfg)
         "Saving Config to %s", self.dirs["CONFIG_FILE"]
     ))
     LIP.save(self.dirs["CONFIG_FILE"], cfg);
-
+    self.cfg = cfg
 end
 
 function TableManager:save_offsets(offsets)

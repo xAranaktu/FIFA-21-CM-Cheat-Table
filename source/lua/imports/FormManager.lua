@@ -21,10 +21,21 @@ function FormManager:new(o)
 end
 
 function FormManager:safe_load_picture_from_ss(comp, ss)
-    if type(ss) == "userdata" then
-        comp.LoadFromStream(ss)
-        return true
+    --self.logger:debug("safe_load_from_ss")
+    --self.logger:debug("check type")
+    local status, err = pcall(type, ss)
+    --self.logger:debug("check type done")
+    if status and type(ss) == "userdata" then
+        -- Doesn't fucking work.
+        -- There isn't any workaround?
+        local status, err = pcall(comp.LoadFromStream, ss)
+        --self.logger:debug(string.format("safe_load_from_ss: status: %s, err: %s", type(status), type(err)))
+        if not status then
+            self.logger:error(string.format("safe_load_from_ss error: %s", err))
+        end
+        return status
     end
+    -- self.logger:debug("safe_load_picture_from_ss false")
 
     return false
 end
@@ -62,7 +73,8 @@ function FormManager:load_img(path, url)
             end
         end
     end
-    return createStringStream(img)
+    local ss = createStringStream(img)
+    return ss
 end
 
 function FormManager:load_crest(teamid, addr)
@@ -172,6 +184,69 @@ function FormManager:get_user_clubteamid(addr)
     return clubteamid
 end
 
+function FormManager:find_player_by_id(playerid)
+    if type(playerid) == 'string' then
+        playerid = tonumber(playerid)
+    end
+
+    local arr_flds = {
+        {
+            name = "playerid",
+            expr = "eq",
+            values = {playerid}
+        }
+    }
+
+    local addr = self.game_db_manager:find_record_addr(
+        "players", arr_flds, 1 
+    )
+
+    if #addr == 0 then 
+        return 0
+    end
+
+    for i=1, #addr do
+        self.logger:debug(string.format("found player record at: 0x%X", addr[i]))
+    end
+
+    writeQword("pPlayersTableCurrentRecord", addr[1])
+
+    return addr[1]
+end
+
+function FormManager:find_team_by_id(teamid)
+    if type(teamid) == 'string' then
+        teamid = tonumber(teamid)
+    end
+
+    local arr_flds = {
+        {
+            name = "teamid",
+            expr = "eq",
+            values = {teamid}
+        }
+    }
+
+    local addr = self.game_db_manager:find_record_addr(
+        "teams", arr_flds, 1 
+    )
+    if #addr == 0 then 
+        return 0
+    end
+    for i=1, #addr do
+        self.logger:debug(string.format("found team record at: 0x%X", addr[i]))
+    end
+
+    writeQword("pTeamsTableCurrentRecord", addr[1])
+
+    return addr[1]
+end
+
+function FormManager:fnCommonDBValGetter(addrs, table_name, field_name, raw)
+    local addr = addrs[table_name]
+    return self.game_db_manager:get_table_record_field_value(addr, table_name, field_name, raw)
+end
+
 function FormManager:set_cfg(new_cfg)
     self.cfg = new_cfg
 end
@@ -180,6 +255,58 @@ function FormManager:style_form()
     self.frm.BorderStyle = bsNone
     self.frm.AlphaBlend = true
     self.frm.AlphaBlendValue = self.cfg.gui.opacity or 255
+end
+
+function FormManager:TabClick(sender)
+    if self.frm[self.tab_panel_map[sender.Name]].Visible then return end
+
+    for key,value in pairs(self.tab_panel_map) do
+        if key == sender.Name then
+            sender.Color = '0x001D1618'
+            self.frm[value].Visible = true
+        else
+            self.frm[key].Color = '0x003F2F34'
+            self.frm[value].Visible = false
+        end
+    end
+
+end
+
+function FormManager:TabMouseEnter(sender)
+    if self.frm[self.tab_panel_map[sender.Name]].Visible then return end
+
+    sender.Color = '0x00271D20'
+end
+
+function FormManager:TabMouseLeave(sender)
+    if self.frm[self.tab_panel_map[sender.Name]].Visible then return end
+
+    sender.Color = '0x003F2F34'
+end
+
+function FormManager:fillColorPreview(colorID, comp_name)
+    local red = _validated_color(self.frm[string.format('%s%dRedEdit', comp_name, colorID)])
+    local green = _validated_color(self.frm[string.format('%s%dGreenEdit', comp_name, colorID)])
+    local blue = _validated_color(self.frm[string.format('%s%dBlueEdit', comp_name, colorID)])
+
+    local comp = self.frm[string.format('%s%dHex', comp_name, colorID)]
+    local saved_onChange = comp.OnChange
+    comp.OnChange = nil
+
+    comp.Text = string.format(
+        '#%02X%02X%02X',
+        red,
+        green,
+        blue
+    )
+
+    comp.OnChange = saved_onChange
+    self.frm[string.format('%s%dPreview', comp_name, colorID)].Color = string.format(
+        '0x%02X%02X%02X',
+        blue,
+        green,
+        red
+    )
 end
 
 function FormManager:ResizerMouseDown(sender, button, x, y)

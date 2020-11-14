@@ -189,6 +189,22 @@ function toBits(num)
     return string.reverse(table.concat(t))
 end
 
+function _validated_color(comp)
+    local saved_onChange = comp.OnChange
+    comp.OnChange = nil
+
+    local icolor_value = tonumber(comp.Text)
+    if icolor_value == nil then
+        comp.Text = 255
+    elseif icolor_value > 255 then
+        comp.Text = 255
+    elseif icolor_value < 0 then
+        comp.Text = 0
+    end
+
+    comp.OnChange = saved_onChange
+    return tonumber(comp.Text)
+end
 
 function deactive_all(record)
     for i=0, record.Count-1 do

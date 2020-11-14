@@ -20,36 +20,6 @@ local new_age = 16
 
 -- Don't touch anything below
 
--- function days_to_date(days)
---     local result = {
---         year = 0,
---         month = 0,
---         day = 0
---     }
-
---     local a, b, c, d, e, m
---     a = days + 2331205
---     b = math.floor((4*a+3)/146097)
---     c = math.floor((-b * 146097 / 4) + a)
---     d = math.floor((4 * c + 3)/1461)
---     e = math.floor(-1461 * d / 4 + c)
---     m = math.floor((5*e+2)/153)
-    
---     result["day"] = math.ceil(-(153 * m + 2) / 5) + e + 1
---     result["month"] = math.ceil(-m / 10) * 12 + m + 3
---     result["year"] = b * 100 + d - 4800 + math.floor(m / 10)
-
---     return result
--- end
-
--- function calculate_age(current_date, birthdate)
---     local age = current_date["year"] - birthdate["year"]
-
---     if (current_date["month"] < birthdate["month"] or (current_date["month"] == birthdate["month"] and current_date["day"] < birthdate["day"] )) then
---         age = age - 1
---     end
---     return age
--- end
 gCTManager:init_ptrs()
 local game_db_manager = gCTManager.game_db_manager
 local memory_manager = gCTManager.memory_manager

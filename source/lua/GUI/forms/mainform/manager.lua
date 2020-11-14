@@ -33,6 +33,10 @@ function thisFormManager:load_images()
     local stream = self:load_headshot(41)
     self.frm.PlayersEditorImg.Picture.LoadFromStream(stream)
     stream.destroy()
+
+    stream = self:load_crest(1)
+    self.frm.TeamsEditorImg.Picture.LoadFromStream(stream)
+    stream.destroy()
 end
 
 function thisFormManager:onSettingsClick()
@@ -43,7 +47,6 @@ function thisFormManager:onCEClick()
     self.ce_visible = not self.ce_visible
 
     getMainForm().Visible = self.ce_visible
-
 end
 
 function thisFormManager:OnWindowCloseClick(sender)
@@ -132,6 +135,25 @@ function thisFormManager:assign_current_form_events()
     self.frm.PlayersEditorBtn.OnPaint = function(sender)
         self:onPaintButton(sender)
     end
+
+    self.frm.TeamsEditorBtn.OnClick = function(sender)
+        TeamsEditorForm.show()
+        -- ShowMessage("Players Editor is not ready yet.\nWill be updated in one of the next updates.\nCheck Patreon/Discord to not miss it.")
+    end
+
+    self.frm.TeamsEditorBtn.OnMouseEnter = function(sender)
+        self:onBtnMouseEnter(sender)
+    end
+
+    self.frm.TeamsEditorBtn.OnMouseLeave = function(sender)
+        self:onBtnMouseLeave(sender)
+    end
+
+    self.frm.TeamsEditorBtn.OnPaint = function(sender)
+        self:onPaintButton(sender)
+    end
+
+
 
 end
 
