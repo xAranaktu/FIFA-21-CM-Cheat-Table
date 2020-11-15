@@ -195,3 +195,7 @@ v21.1.1.3:
     - Added to "Non-CM Related":
         - "Game Settigs" -> "Camera"
     - Added 50 new head models to "fix_players_headmodels.lua"
+
+v21.1.1.4:
+    - Added to GUI:
+        - Transfer Players
