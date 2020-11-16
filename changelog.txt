@@ -199,3 +199,13 @@ v21.1.1.3:
 v21.1.1.4:
     - Added to GUI:
         - Transfer Players
+        
+v21.1.1.5:
+    - Added Player Contract:
+        - Contract Negotiation
+        - Disable negotiation status checks
+    - Added Sim Match Settings:
+        - Max Cards
+        - Max Injures
+        - Don't lose stamina
+        - Base Fatigue
