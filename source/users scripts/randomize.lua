@@ -583,7 +583,7 @@ while true do
 
                 -- Randomize attributes
                 local new_ovr = 0
-                local ovr_formula = OVR_FORMULA_2[new_primary_pos]
+                local ovr_formula = OVR_FORMULA_2[primary_pos]
                 
                 for _, fld in ipairs(attributes_fields) do
                     local new_attr_val = math.random(attribute_min, attribute_max)
