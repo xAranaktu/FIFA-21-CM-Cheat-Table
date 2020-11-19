@@ -209,3 +209,7 @@ v21.1.1.5:
         - Max Injures
         - Don't lose stamina
         - Base Fatigue
+        
+v21.1.1.6:
+    - Added to GUI:
+        - Match Schedule Editor
