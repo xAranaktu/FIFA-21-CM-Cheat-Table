@@ -96,6 +96,7 @@ AOB_PATTERNS = {
     YASomeScoutIni = '48 8D 4C 24 20 48 83 C2 08 41',
     YARemoveMinAgeRequirement = '89 43 40 85 C0',
     CustomManagerEditable = 'C7 45 74 0F 27 00 00',
+    CustomTransfers = '84 C0 48 8B 01 74 ?? FF 50 10 41',
     AltTab = '48 83 EC 48 48 83 3D ?? ?? ?? ?? ?? 74'
 
     -- Not used anymore

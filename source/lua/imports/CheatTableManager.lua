@@ -12,6 +12,7 @@ local settingsFormManager = require 'lua/GUI/forms/settingsform/manager';
 local playersEditorFormManager = require 'lua/GUI/forms/playerseditorform/manager';
 local teamsEditorFormManager = require 'lua/GUI/forms/teamseditorform/manager';
 local findteamFormManager = require 'lua/GUI/forms/findteamform/manager';
+local transferplayersFormManager = require 'lua/GUI/forms/transferplayersform/manager';
 
 local TableManager = {}
 
@@ -200,6 +201,10 @@ function TableManager:get_forms_map()
         findteam_form = {
             mgr = findteamFormManager,
             frm = FindTeamForm
+        },
+        transferplayers_form = {
+            mgr = transferplayersFormManager,
+            frm = TransferPlayersForm
         }
     }
 end
@@ -223,6 +228,10 @@ function TableManager:setup_forms()
     teamsEditorFormManager.dirs = dirs_cpy
     teamsEditorFormManager.game_db_manager = self.game_db_manager
     teamsEditorFormManager.memory_manager = self.memory_manager
+
+    transferplayersFormManager.dirs = dirs_cpy
+    transferplayersFormManager.game_db_manager = self.game_db_manager
+    transferplayersFormManager.memory_manager = self.memory_manager
 
     findteamFormManager.game_db_manager = self.game_db_manager
     findteamFormManager.memory_manager = self.memory_manager

@@ -20,6 +20,20 @@ function FormManager:new(o)
     return o;
 end
 
+function FormManager:file_exists(name)
+    local f, err = io.open(name,"r")
+    if f then
+        io.close(f)
+        sleep(250)
+        return true
+    else
+        self.logger:warning(
+            string.format("file_exists (%s) error %s", name, err or "")
+        )
+        return false
+    end
+end
+
 function FormManager:safe_load_picture_from_ss(comp, ss)
     --self.logger:debug("safe_load_from_ss")
     --self.logger:debug("check type")
@@ -182,6 +196,69 @@ function FormManager:get_user_clubteamid(addr)
     local clubteamid = self.game_db_manager:get_table_record_field_value(addr, "career_users", "clubteamid")
     self.logger:debug(string.format("clubteamid: %d, %s", clubteamid, type(clubteamid)))
     return clubteamid
+end
+
+function FormManager:find_player_club_team_record(playerid)
+    if type(playerid) == 'string' then
+        playerid = tonumber(playerid)
+    end
+
+    -- - 78, International
+    -- - 2136, International Women
+    -- - 76, Rest of World
+    -- - 383, Create Player League
+    local invalid_leagues = {
+        76, 78, 2136, 383
+    }
+
+    local arr_flds = {
+        {
+            name = "playerid",
+            expr = "eq",
+            values = {playerid}
+        }
+    }
+
+    local addr = self.game_db_manager:find_record_addr(
+        "teamplayerlinks", arr_flds
+    )
+
+    if #addr <= 0 then
+        self.logger:warning(string.format("No teams for playerid: %d", playerid))
+        return 0
+    end
+
+    local fnIsLeagueValid = function(invalid_leagues, leagueid)
+        for j=1, #invalid_leagues do
+            local invalid_leagueid = invalid_leagues[j]
+            if invalid_leagueid == leagueid then return false end
+        end
+        return true
+    end
+
+    for i=1, #addr do
+        local found_addr = addr[i]
+        local teamid = self.game_db_manager:get_table_record_field_value(found_addr, "teamplayerlinks", "teamid")
+        local arr_flds_2 = {
+            {
+                name = "teamid",
+                expr = "eq",
+                values = {teamid}
+            }
+        }
+        local found_addr2 = self.game_db_manager:find_record_addr(
+            "leagueteamlinks", arr_flds_2, 1
+        )[1]
+        local leagueid = self.game_db_manager:get_table_record_field_value(found_addr2, "leagueteamlinks", "leagueid")
+        if fnIsLeagueValid(invalid_leagues, leagueid) then
+            self.logger:debug(string.format("found: %X, teamid: %d, leagueid: %d", found_addr, teamid, leagueid))
+            writeQword("pTeamplayerlinksTableCurrentRecord", found_addr)
+            return found_addr
+        end 
+    end
+
+    self.logger:warning(string.format("No club teams for playerid: %d", playerid))
+    return 0
 end
 
 function FormManager:find_player_by_id(playerid)

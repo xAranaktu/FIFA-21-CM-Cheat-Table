@@ -153,8 +153,21 @@ function thisFormManager:assign_current_form_events()
         self:onPaintButton(sender)
     end
 
+    self.frm.PlayersTransferBtn.OnClick = function(sender)
+        TransferPlayersForm.show()
+    end
 
+    self.frm.PlayersTransferBtn.OnMouseEnter = function(sender)
+        self:onBtnMouseEnter(sender)
+    end
 
+    self.frm.PlayersTransferBtn.OnMouseLeave = function(sender)
+        self:onBtnMouseLeave(sender)
+    end
+
+    self.frm.PlayersTransferBtn.OnPaint = function(sender)
+        self:onPaintButton(sender)
+    end
 end
 
 function thisFormManager:setup(params)
