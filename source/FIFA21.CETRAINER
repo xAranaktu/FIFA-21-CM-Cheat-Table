@@ -15,7 +15,7 @@
   <CheatEntries>
     <CheatEntry>
       <ID>0</ID>
-      <Description>"v21.1.1.4"</Description>
+      <Description>"v21.1.1.5"</Description>
       <LastState Value="" RealAddress="00000000"/>
       <Color>804000</Color>
       <GroupHeader>1</GroupHeader>
@@ -16043,6 +16043,7 @@ unregistersymbol(GS_CamProSwing)
             <CheatEntry>
               <ID>4776</ID>
               <Description>"Transfer Budget"</Description>
+              <LastState Value="210972488" RealAddress="11475DB08"/>
               <VariableType>4 Bytes</VariableType>
               <Address>pScriptsBase</Address>
               <Offsets>
@@ -23260,6 +23261,176 @@ dealloc(Weather)
           </CheatEntries>
         </CheatEntry>
         <CheatEntry>
+          <ID>4865</ID>
+          <Description>"Sim Match Settings"</Description>
+          <Options moHideChildren="1"/>
+          <LastState/>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>{
+AUTHOR: Aranaktu
+
+GAME VERSION: Script should always work with newest version of the game which can be downloaded from Origin.
+
+RISK LEVEL: 0/5 (There is no chance that this script will harm your cm save.)
+
+DESCRIPTION:
+Script allows you to change a few options from simsettings.ini
+
+HOW TO USE:
+- Activate the script before you start simulation
+
+VIDEO TUTORIAL(S):
+- NONE
+}
+
+[ENABLE]
+//code from here to '[DISABLE]' will be used to enable the cheat
+{$lua}
+if syntaxcheck then return end
+onScriptActivate()
+
+INJECT_SimMatchSettings = gCTManager.memory_manager:get_validated_address('SimMatchSettings', 'FootballCompEng_Win64_retail.dll', 'FootballCompEng')
+ORG_SimMatchSettings = readBytes(INJECT_SimMatchSettings, 12, true)
+
+{$asm}
+
+alloc(newmem_SimMatchSettings, $500, $INJECT_SimMatchSettings)
+
+label(code_SimMatchSettings)
+label(ret_SimMatchSettings)
+
+alloc(sim_settings_max_cards, 4, $INJECT_SimMatchSettings)
+registersymbol(sim_settings_max_cards)
+sim_settings_max_cards:
+db 04 00 00 00
+
+alloc(sim_settings_max_injures, 4, $INJECT_SimMatchSettings)
+registersymbol(sim_settings_max_injures)
+sim_settings_max_injures:
+db 02 00 00 00
+
+alloc(sim_settings_fatiguebase, 4, $INJECT_SimMatchSettings)
+registersymbol(sim_settings_fatiguebase)
+sim_settings_fatiguebase:
+db 24 00 00 00
+
+newmem_SimMatchSettings:
+  mov r10d, [sim_settings_max_injures]
+  mov [r9+00000074], r10d
+
+  mov r10d, [sim_settings_fatiguebase]
+  mov [r9+0000001C], r10d
+
+  mov r10d, [sim_settings_max_cards]
+  mov [r9+000000A4], r10d
+code_SimMatchSettings:
+  //mov r10d,[r9+000000A4]
+  jmp ret_SimMatchSettings
+
+$INJECT_SimMatchSettings:
+  jmp newmem_SimMatchSettings
+  nop
+  nop
+ret_SimMatchSettings:
+
+[DISABLE]
+//code_SimMatchSettings from here till the end of the code_SimMatchSettings will be used to disable the cheat
+{$lua}
+writeBytes(INJECT_SimMatchSettings, ORG_SimMatchSettings)
+{$asm}
+
+dealloc(newmem_SimMatchSettings)
+dealloc(sim_settings_max_cards)
+dealloc(sim_settings_max_injures)
+dealloc(sim_settings_fatiguebase)
+unregistersymbol(sim_settings_max_cards)
+unregistersymbol(sim_settings_max_injures)
+unregistersymbol(sim_settings_fatiguebase)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "FootballCompEng_Win64_retail.dll"+895BD
+
+"FootballCompEng_Win64_retail.dll"+895A1: 41 54                 -  push r12
+"FootballCompEng_Win64_retail.dll"+895A3: 41 55                 -  push r13
+"FootballCompEng_Win64_retail.dll"+895A5: 41 56                 -  push r14
+"FootballCompEng_Win64_retail.dll"+895A7: 41 57                 -  push r15
+"FootballCompEng_Win64_retail.dll"+895A9: 48 83 EC 50           -  sub rsp,50
+"FootballCompEng_Win64_retail.dll"+895AD: 45 8B E0              -  mov r12d,r8d
+"FootballCompEng_Win64_retail.dll"+895B0: 8B DA                 -  mov ebx,edx
+"FootballCompEng_Win64_retail.dll"+895B2: 48 8B 41 08           -  mov rax,[rcx+08]
+"FootballCompEng_Win64_retail.dll"+895B6: 4C 8B 70 08           -  mov r14,[rax+08]
+"FootballCompEng_Win64_retail.dll"+895BA: 4C 8B 08              -  mov r9,[rax]
+// ---------- INJECTING HERE ----------
+"FootballCompEng_Win64_retail.dll"+895BD: 45 8B 91 A4 00 00 00  -  mov r10d,[r9+000000A4]
+// ---------- DONE INJECTING  ----------
+"FootballCompEng_Win64_retail.dll"+895C4: 41 8B B9 A8 00 00 00  -  mov edi,[r9+000000A8]
+"FootballCompEng_Win64_retail.dll"+895CB: 41 8B 81 AC 00 00 00  -  mov eax,[r9+000000AC]
+"FootballCompEng_Win64_retail.dll"+895D2: 89 44 24 20           -  mov [rsp+20],eax
+"FootballCompEng_Win64_retail.dll"+895D6: 41 8B 81 B0 00 00 00  -  mov eax,[r9+000000B0]
+"FootballCompEng_Win64_retail.dll"+895DD: 89 84 24 A8 00 00 00  -  mov [rsp+000000A8],eax
+"FootballCompEng_Win64_retail.dll"+895E4: 45 85 D2              -  test r10d,r10d
+"FootballCompEng_Win64_retail.dll"+895E7: 0F 84 02 01 00 00     -  je FootballCompEng_Win64_retail.dll+896EF
+"FootballCompEng_Win64_retail.dll"+895ED: 41 8B C0              -  mov eax,r8d
+"FootballCompEng_Win64_retail.dll"+895F0: 2B C2                 -  sub eax,edx
+"FootballCompEng_Win64_retail.dll"+895F2: FF C0                 -  inc eax
+}
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>4866</ID>
+              <Description>"Max Cards"</Description>
+              <VariableType>4 Bytes</VariableType>
+              <Address>sim_settings_max_cards</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>4867</ID>
+              <Description>"Max Injures"</Description>
+              <VariableType>4 Bytes</VariableType>
+              <Address>sim_settings_max_injures</Address>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>1992</ID>
+              <Description>"Don't lose stamina"</Description>
+              <LastState/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{
+AUTHOR:
+- Aranaktu
+
+GAME VERSION:
+- Script should always work with newest version of the game which can be downloaded from Origin.
+
+RISK LEVEL:
+- 0/5 (There is no chance that this script will harm your cm save.)
+
+DESCRIPTION:
+  Players will be fully renegerated after simming match
+
+HOW TO USE:
+  1. Activate the script before you start match sim
+
+VIDEO TUTORIAL:
+- NONE
+}
+
+
+[ENABLE]
+sim_settings_fatiguebase:
+  db 9C FF FF FF
+[DISABLE]
+sim_settings_fatiguebase:
+  db 24 00 00 00
+</AssemblerScript>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>4868</ID>
+              <Description>"Base Fatigue"</Description>
+              <VariableType>4 Bytes</VariableType>
+              <Address>sim_settings_fatiguebase</Address>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
           <ID>4777</ID>
           <Description>"Transfer HUB"</Description>
           <Options moHideChildren="1"/>
@@ -23642,6 +23813,352 @@ dealloc(newmem_AllowLoanApp)
 "FIFA21.exe"+4862E37: 74 17                 -  je FIFA21.exe+4862E50
 "FIFA21.exe"+4862E39: 48 8B 08              -  mov rcx,[rax]
 "FIFA21.exe"+4862E3C: 4C 8B 41 18           -  mov r8,[rcx+18]
+}
+</AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>4863</ID>
+          <Description>"Player Contract"</Description>
+          <Options moHideChildren="1"/>
+          <LastState Value="" RealAddress="00000000"/>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>1459</ID>
+              <Description>"Contract Negotiation"</Description>
+              <Options moHideChildren="1"/>
+              <LastState/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{
+AUTHOR:
+- Aranaktu
+
+GAME VERSION:
+- Script should always work with newest version of the game which can be downloaded from Origin.
+
+RISK LEVEL:
+- 2/5 (There is slight chance that this script will harm your cm save.)
+
+DESCRIPTION:
+  Player will accept any terms that you have specified in the cheat table
+
+HOW TO USE:
+  1. Activate script
+  2. Make changes in cheat table if you want to
+  3. Start 'Contract Negotiation' with the player.
+  4. Just accept anything. Even if there be a wage $200,000, but in CT you will have $500 then when negotations will finish player wage will be $500.
+
+VIDEO TUTORIAL:
+- https://youtu.be/qVEnMdiH0Po?list=PLx3DZm1ifjQw5exchXxcZpj0oN7_eDy-Q&amp;t=1935
+}
+
+[ENABLE]
+//code from here to '[DISABLE]' will be used to enable the cheat
+{$lua}
+if syntaxcheck then return end
+onScriptActivate()
+
+INJECT_ContractNeg = gCTManager.memory_manager:get_validated_address('ContractNeg')
+ORG_ContractNeg = readBytes(INJECT_ContractNeg, 12, true)
+
+{$asm}
+
+alloc(newmem_ContractNeg, $500, $INJECT_ContractNeg)
+
+label(code_ContractNeg)
+label(ret_ContractNeg)
+
+alloc(ContractNeg_Wage, 4, $INJECT_ContractNeg)
+registersymbol(ContractNeg_Wage)
+ContractNeg_Wage:
+dd (int)500
+
+alloc(ContractNeg_Length, 4, $INJECT_ContractNeg)
+registersymbol(ContractNeg_Length)
+ContractNeg_Length:
+dd (int)72
+
+alloc(ContractNeg_ReleaseClause, 4, $INJECT_ContractNeg)
+registersymbol(ContractNeg_ReleaseClause)
+ContractNeg_ReleaseClause:
+dd (int)0
+
+alloc(ContractNeg_Role, 4, $INJECT_ContractNeg)
+registersymbol(ContractNeg_Role)
+ContractNeg_Role:
+dd (int)5
+
+alloc(ContractNeg_SigningBonus, 4, $INJECT_ContractNeg)
+registersymbol(ContractNeg_SigningBonus)
+ContractNeg_SigningBonus:
+dd (int)0
+
+alloc(ContractNeg_BonusType, 4, $INJECT_ContractNeg)
+registersymbol(ContractNeg_BonusType)
+ContractNeg_BonusType:
+dd (int)0
+
+alloc(ContractNeg_BonusType_Count, 4, $INJECT_ContractNeg)
+registersymbol(ContractNeg_BonusType_Count)
+ContractNeg_BonusType_Count:
+dd (int)50
+
+alloc(ContractNeg_BonusType_Sum, 4, $INJECT_ContractNeg)
+registersymbol(ContractNeg_BonusType_Sum)
+ContractNeg_BonusType_Sum:
+dd (int)5
+
+newmem_ContractNeg:
+  mov rdx,[rax+38]
+
+  push RAX
+  xor rax, rax
+  mov eax, [ContractNeg_Wage]
+  mov [rdx-40], eax // Wage
+
+  mov eax, [ContractNeg_Length]
+  mov [rdx-40+4], eax // Length
+
+  mov eax, [ContractNeg_ReleaseClause]
+  mov [rdx-40+8], eax // Release Clause
+
+  mov eax, [ContractNeg_Role]
+  mov [rdx-40+C], eax  // Role
+
+  mov eax, [ContractNeg_SigningBonus]
+  mov [rdx-40+10], eax  // SigningBonus
+
+  mov eax, [ContractNeg_BonusType]
+  mov [rdx-40+14], eax  // BonusType , 0 Appearances, 1 clean Sheets
+
+  mov eax, [ContractNeg_BonusType_Count]
+  mov [rdx-40+18], eax  // Bonus Type - Count
+
+  mov eax, [ContractNeg_BonusType_Sum]
+  mov [rdx-40+1C], eax  // Bonus Type - Sum
+  pop RAX
+code_ContractNeg:
+  sub rdx,40
+  jmp ret_ContractNeg
+
+$INJECT_ContractNeg:
+  jmp newmem_ContractNeg
+  nop
+  nop
+  nop
+ret_ContractNeg:
+
+[DISABLE]
+//code_ContractNeg from here till the end of the code_ContractNeg will be used to disable the cheat
+{$lua}
+writeBytes(INJECT_ContractNeg, ORG_ContractNeg)
+{$asm}
+
+dealloc(newmem_ContractNeg)
+dealloc(ContractNeg_Wage)
+dealloc(ContractNeg_Length)
+dealloc(ContractNeg_ReleaseClause)
+dealloc(ContractNeg_Role)
+dealloc(ContractNeg_SigningBonus)
+dealloc(ContractNeg_BonusType)
+dealloc(ContractNeg_BonusType_Count)
+dealloc(ContractNeg_BonusType_Sum)
+unregistersymbol(ContractNeg_Wage)
+unregistersymbol(ContractNeg_Length)
+unregistersymbol(ContractNeg_ReleaseClause)
+unregistersymbol(ContractNeg_Role)
+unregistersymbol(ContractNeg_SigningBonus)
+unregistersymbol(ContractNeg_BonusType)
+unregistersymbol(ContractNeg_BonusType_Count)
+unregistersymbol(ContractNeg_BonusType_Sum)
+{
+// ORIGINAL CODE - INJECTION POINT: "FIFA21.exe"+5973B7E
+
+"FIFA21.exe"+5973B5F: CC                       -  int 3
+"FIFA21.exe"+5973B60: 48 8B 41 18              -  mov rax,[rcx+18]
+"FIFA21.exe"+5973B64: 48 8B D1                 -  mov rdx,rcx
+"FIFA21.exe"+5973B67: 33 C9                    -  xor ecx,ecx
+"FIFA21.exe"+5973B69: 89 48 08                 -  mov [rax+08],ecx
+"FIFA21.exe"+5973B6C: 48 8B 42 18              -  mov rax,[rdx+18]
+"FIFA21.exe"+5973B70: 89 48 0C                 -  mov [rax+0C],ecx
+"FIFA21.exe"+5973B73: 48 8B 4A 18              -  mov rcx,[rdx+18]
+"FIFA21.exe"+5973B77: 48 8B 42 20              -  mov rax,[rdx+20]
+"FIFA21.exe"+5973B7B: 4C 8B 01                 -  mov r8,[rcx]
+// ---------- INJECTING HERE ----------
+"FIFA21.exe"+5973B7E: 48 8B 50 38              -  mov rdx,[rax+38]
+"FIFA21.exe"+5973B82: 48 83 EA 40              -  sub rdx,40
+// ---------- DONE INJECTING  ----------
+"FIFA21.exe"+5973B86: 49 FF 60 08              -  jmp qword ptr [r8+08]
+"FIFA21.exe"+5973B8A: CC                       -  int 3
+"FIFA21.exe"+5973B8B: CC                       -  int 3
+"FIFA21.exe"+5973B8C: CC                       -  int 3
+"FIFA21.exe"+5973B8D: CC                       -  int 3
+"FIFA21.exe"+5973B8E: CC                       -  int 3
+"FIFA21.exe"+5973B8F: CC                       -  int 3
+"FIFA21.exe"+5973B90: 48 8B 41 18              -  mov rax,[rcx+18]
+"FIFA21.exe"+5973B94: 48 8B D1                 -  mov rdx,rcx
+"FIFA21.exe"+5973B97: C7 40 08 00 00 00 00     -  mov [rax+08],00000000
+}
+</AssemblerScript>
+              <CheatEntries>
+                <CheatEntry>
+                  <ID>1460</ID>
+                  <Description>"Wage"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>ContractNeg_Wage</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1461</ID>
+                  <Description>"Contract Length"</Description>
+                  <DropDownList ReadOnly="1" DescriptionOnly="1" DisplayValueAsItem="1">12: '1 Year'
+24: '2 Years'
+36: '3 Years'
+48: '4 Years'
+60: '5 Years'
+72: '6 Years'
+</DropDownList>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>ContractNeg_Length</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1462</ID>
+                  <Description>"Release Clause"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>ContractNeg_ReleaseClause</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1463</ID>
+                  <Description>"Squad Role"</Description>
+                  <DropDownList ReadOnly="1" DescriptionOnly="1" DisplayValueAsItem="1">1: 'Crucial'
+2: 'Important'
+3: 'Rotation'
+4: 'Sporadic'
+5: 'Prospect'
+</DropDownList>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>ContractNeg_Role</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1464</ID>
+                  <Description>"Signing Bonus"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>ContractNeg_SigningBonus</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1465</ID>
+                  <Description>"Bonus Type"</Description>
+                  <DropDownList ReadOnly="1" DescriptionOnly="1" DisplayValueAsItem="1">0: 'Appearances'
+1: 'Clean Sheets'
+2: 'Goals scored'
+</DropDownList>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>ContractNeg_BonusType</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1466</ID>
+                  <Description>"Bonus Type - Count"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>ContractNeg_BonusType_Count</Address>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>1467</ID>
+                  <Description>"Bonus Type - Sum"</Description>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>ContractNeg_BonusType_Sum</Address>
+                </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>4864</ID>
+              <Description>"Disable negotiation status checks"</Description>
+              <LastState/>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>{
+AUTHOR:
+- Aranaktu
+
+GAME VERSION:
+- Script should always work with newest version of the game which can be downloaded from Origin.
+
+RISK LEVEL:
+- 0/5 (There is no chance that this script will harm your cm save.)
+
+DESCRIPTION:
+  You can renegotiate contract with your player at any time.
+  Even if your previous negotation has failed or you have recently negotiated a new contract with this player
+
+HOW TO USE:
+  1. Activate script
+  2. Start 'Contract Negotiation' with your player.
+
+VIDEO TUTORIAL:
+- NONE
+}
+
+
+[ENABLE]
+//code from here to '[DISABLE]' will be used to enable the cheat
+{$lua}
+if syntaxcheck then return end
+onScriptActivate()
+
+INJECT_NegStatusCheck = gCTManager.memory_manager:get_validated_address('NegStatusCheck')
+ORG_NegStatusCheck = readBytes(INJECT_NegStatusCheck, 12, true)
+
+{$asm}
+
+alloc(newmem_NegStatusCheck, $500, $INJECT_NegStatusCheck)
+
+label(code_NegStatusCheck)
+label(ret_NegStatusCheck)
+
+newmem_NegStatusCheck:
+code_NegStatusCheck:
+  call qword ptr [rax+00000130]
+  xor eax, eax
+  jmp ret_NegStatusCheck
+
+$INJECT_NegStatusCheck:
+  jmp newmem_NegStatusCheck
+  nop
+ret_NegStatusCheck:
+
+[DISABLE]
+//code_NegStatusCheck from here till the end of the code_NegStatusCheck will be used to disable the cheat
+{$lua}
+writeBytes(INJECT_NegStatusCheck, ORG_NegStatusCheck)
+{$asm}
+
+dealloc(newmem_NegStatusCheck)
+
+{
+// ORIGINAL CODE - INJECTION POINT: "FIFA21.exe"+4873FDE
+
+"FIFA21.exe"+4873FBA: F3 0F 7F 44 24 30        -  movdqu [rsp+30],xmm0
+"FIFA21.exe"+4873FC0: 48 8B 08                 -  mov rcx,[rax]
+"FIFA21.exe"+4873FC3: 4C 8B 41 08              -  mov r8,[rcx+08]
+"FIFA21.exe"+4873FC7: 48 8D 54 24 30           -  lea rdx,[rsp+30]
+"FIFA21.exe"+4873FCC: 48 8B C8                 -  mov rcx,rax
+"FIFA21.exe"+4873FCF: 41 FF D0                 -  call r8
+"FIFA21.exe"+4873FD2: 49 8B 07                 -  mov rax,[r15]
+"FIFA21.exe"+4873FD5: 44 8B C5                 -  mov r8d,ebp
+"FIFA21.exe"+4873FD8: 41 8B D6                 -  mov edx,r14d
+"FIFA21.exe"+4873FDB: 49 8B CF                 -  mov rcx,r15
+// ---------- INJECTING HERE ----------
+"FIFA21.exe"+4873FDE: FF 90 30 01 00 00        -  call qword ptr [rax+00000130]
+// ---------- DONE INJECTING  ----------
+"FIFA21.exe"+4873FE4: 89 47 18                 -  mov [rdi+18],eax
+"FIFA21.exe"+4873FE7: 85 C0                    -  test eax,eax
+"FIFA21.exe"+4873FE9: 75 72                    -  jne FIFA21.exe+487405D
+"FIFA21.exe"+4873FEB: 49 8B 07                 -  mov rax,[r15]
+"FIFA21.exe"+4873FEE: 89 6C 24 20              -  mov [rsp+20],ebp
+"FIFA21.exe"+4873FF2: 44 8B CD                 -  mov r9d,ebp
+"FIFA21.exe"+4873FF5: 45 8B C6                 -  mov r8d,r14d
+"FIFA21.exe"+4873FF8: 33 D2                    -  xor edx,edx
+"FIFA21.exe"+4873FFA: 49 8B CF                 -  mov rcx,r15
+"FIFA21.exe"+4873FFD: FF 90 D0 01 00 00        -  call qword ptr [rax+000001D0]
 }
 </AssemblerScript>
             </CheatEntry>
@@ -25009,210 +25526,245 @@ bAwayTeam_Tired:
                 <CheatEntry>
                   <ID>4460</ID>
                   <Description>"PlayerID 1"</Description>
+                  <LastState Value="0" RealAddress="13FFE0010"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4466</ID>
                   <Description>"PlayerID 2"</Description>
+                  <LastState Value="0" RealAddress="13FFE0014"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+4</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4465</ID>
                   <Description>"PlayerID 3"</Description>
+                  <LastState Value="0" RealAddress="13FFE0018"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+8</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4464</ID>
                   <Description>"PlayerID 4"</Description>
+                  <LastState Value="0" RealAddress="13FFE001C"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+C</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4463</ID>
                   <Description>"PlayerID 5"</Description>
+                  <LastState Value="0" RealAddress="13FFE0020"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+10</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4462</ID>
                   <Description>"PlayerID 6"</Description>
+                  <LastState Value="0" RealAddress="13FFE0024"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+14</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4472</ID>
                   <Description>"PlayerID 7"</Description>
+                  <LastState Value="0" RealAddress="13FFE002C"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+1C</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4473</ID>
                   <Description>"PlayerID 8"</Description>
+                  <LastState Value="0" RealAddress="13FFE0030"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+20</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4474</ID>
                   <Description>"PlayerID 9"</Description>
+                  <LastState Value="0" RealAddress="13FFE0034"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+24</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4475</ID>
                   <Description>"PlayerID 10"</Description>
+                  <LastState Value="0" RealAddress="13FFE0038"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+28</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4476</ID>
                   <Description>"PlayerID 11"</Description>
+                  <LastState Value="0" RealAddress="13FFE003C"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+2C</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4467</ID>
                   <Description>"PlayerID 12"</Description>
+                  <LastState Value="0" RealAddress="13FFE0040"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+30</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4468</ID>
                   <Description>"PlayerID 13"</Description>
+                  <LastState Value="0" RealAddress="13FFE0044"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+34</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4469</ID>
                   <Description>"PlayerID 14"</Description>
+                  <LastState Value="0" RealAddress="13FFE0048"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+38</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4470</ID>
                   <Description>"PlayerID 15"</Description>
+                  <LastState Value="0" RealAddress="13FFE004C"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+3C</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4471</ID>
                   <Description>"PlayerID 16"</Description>
+                  <LastState Value="0" RealAddress="13FFE0050"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+40</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4477</ID>
                   <Description>"PlayerID 17"</Description>
+                  <LastState Value="0" RealAddress="13FFE0054"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+44</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4478</ID>
                   <Description>"PlayerID 18"</Description>
+                  <LastState Value="0" RealAddress="13FFE0058"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+48</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4497</ID>
                   <Description>"PlayerID 19"</Description>
+                  <LastState Value="0" RealAddress="13FFE0060"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+50</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4498</ID>
                   <Description>"PlayerID 20"</Description>
+                  <LastState Value="0" RealAddress="13FFE0064"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+54</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4499</ID>
                   <Description>"PlayerID 21"</Description>
+                  <LastState Value="0" RealAddress="13FFE0068"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+58</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4500</ID>
                   <Description>"PlayerID 22"</Description>
+                  <LastState Value="0" RealAddress="13FFE006C"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+5C</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4501</ID>
                   <Description>"PlayerID 23"</Description>
+                  <LastState Value="0" RealAddress="13FFE0070"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+60</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4502</ID>
                   <Description>"PlayerID 24"</Description>
+                  <LastState Value="0" RealAddress="13FFE0074"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+64</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4503</ID>
                   <Description>"PlayerID 25"</Description>
+                  <LastState Value="0" RealAddress="13FFE007C"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+6C</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4504</ID>
                   <Description>"PlayerID 26"</Description>
+                  <LastState Value="0" RealAddress="13FFE0080"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+70</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4505</ID>
                   <Description>"PlayerID 27"</Description>
+                  <LastState Value="0" RealAddress="13FFE0084"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+74</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4506</ID>
                   <Description>"PlayerID 28"</Description>
+                  <LastState Value="0" RealAddress="13FFE0088"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+78</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4507</ID>
                   <Description>"PlayerID 29"</Description>
+                  <LastState Value="0" RealAddress="13FFE008C"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+7C</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4508</ID>
                   <Description>"PlayerID 30"</Description>
+                  <LastState Value="0" RealAddress="13FFE0090"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+80</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4509</ID>
                   <Description>"PlayerID 31"</Description>
+                  <LastState Value="0" RealAddress="13FFE0094"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+84</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4510</ID>
                   <Description>"PlayerID 32"</Description>
+                  <LastState Value="0" RealAddress="13FFE0098"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+88</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4511</ID>
                   <Description>"PlayerID 33"</Description>
+                  <LastState Value="0" RealAddress="13FFE009C"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+8C</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4512</ID>
                   <Description>"PlayerID 34"</Description>
+                  <LastState Value="0" RealAddress="13FFE00A0"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+90</Address>
                 </CheatEntry>
                 <CheatEntry>
                   <ID>4513</ID>
                   <Description>"PlayerID 35"</Description>
+                  <LastState Value="0" RealAddress="13FFE00A4"/>
                   <VariableType>4 Bytes</VariableType>
                   <Address>arrNeverTiredPlayerIDs+94</Address>
                 </CheatEntry>
@@ -25658,7 +26210,7 @@ dealloc(newmem_disable_pgm)
   <UserdefinedSymbols>
     <SymbolEntry>
       <Name>pScriptsBase</Name>
-      <Address>13FFF0000</Address>
+      <Address>13FF60000</Address>
     </SymbolEntry>
     <SymbolEntry>
       <Name>arrNeverTiredPlayerIDs</Name>
@@ -25666,7 +26218,7 @@ dealloc(newmem_disable_pgm)
     </SymbolEntry>
     <SymbolEntry>
       <Name>funcGenReport</Name>
-      <Address>13FFF0030</Address>
+      <Address>13FF60030</Address>
     </SymbolEntry>
     <SymbolEntry>
       <Name>bNewReport</Name>
@@ -25678,15 +26230,19 @@ dealloc(newmem_disable_pgm)
     </SymbolEntry>
     <SymbolEntry>
       <Name>pScoutMgr</Name>
-      <Address>13FFF0020</Address>
+      <Address>13FF60020</Address>
     </SymbolEntry>
     <SymbolEntry>
       <Name>pCareerModeSmth</Name>
-      <Address>13FFF0010</Address>
+      <Address>13FF60010</Address>
     </SymbolEntry>
     <SymbolEntry>
       <Name>magic_fldtype_real</Name>
-      <Address>13FFF0040</Address>
+      <Address>13FF60040</Address>
+    </SymbolEntry>
+    <SymbolEntry>
+      <Name>arr_NewTransfers</Name>
+      <Address>13FF40000</Address>
     </SymbolEntry>
   </UserdefinedSymbols>
   <LuaScript>-- Hello!

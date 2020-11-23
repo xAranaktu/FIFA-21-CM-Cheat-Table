@@ -97,10 +97,17 @@ AOB_PATTERNS = {
     YARemoveMinAgeRequirement = '89 43 40 85 C0',
     CustomManagerEditable = 'C7 45 74 0F 27 00 00',
     CustomTransfers = '84 C0 48 8B 01 74 ?? FF 50 10 41',
-    AltTab = '48 83 EC 48 48 83 3D ?? ?? ?? ?? ?? 74'
+    NegStatusCheck = 'FF 90 30 01 00 00 89 47 18',
+    ContractNeg = '48 8B 50 38 48 83 EA 40 49 FF 60 08 CC CC CC CC CC',
+    AltTab = '48 83 EC 48 48 83 3D ?? ?? ?? ?? ?? 74',
 
-    -- Not used anymore
-    -- BASE_FORM_MORALE_RLC = '48 89 35 ?? ?? ?? ?? 48 89 3D ?? ?? ?? ?? 48 89 0D ?? ?? ?? ??'
+    -- FootballCompEng_Win64_retail.dll
+    FootballCompEng = {
+        MODULE_NAME = 'FootballCompEng_Win64_retail.dll',
+        AOBS = {
+            SimMatchSettings = '45 8B 91 A4 00 00 00'
+        }
+    }
 }
 
 DEFAULT_CFG = {
