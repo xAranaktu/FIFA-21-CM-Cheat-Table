@@ -119,9 +119,12 @@ function thisFormManager:assign_current_form_events()
         self:onCEClick(sender)
     end
 
+    self.frm.PlayersEditorImg.OnClick = function(sender)
+        PlayersEditorForm.show()
+    end
+
     self.frm.PlayersEditorBtn.OnClick = function(sender)
         PlayersEditorForm.show()
-        -- ShowMessage("Players Editor is not ready yet.\nWill be updated in one of the next updates.\nCheck Patreon/Discord to not miss it.")
     end
 
     self.frm.PlayersEditorBtn.OnMouseEnter = function(sender)
@@ -136,9 +139,12 @@ function thisFormManager:assign_current_form_events()
         self:onPaintButton(sender)
     end
 
+    self.frm.TeamsEditorImg.OnClick = function(sender)
+        TeamsEditorForm.show()
+    end
+
     self.frm.TeamsEditorBtn.OnClick = function(sender)
         TeamsEditorForm.show()
-        -- ShowMessage("Players Editor is not ready yet.\nWill be updated in one of the next updates.\nCheck Patreon/Discord to not miss it.")
     end
 
     self.frm.TeamsEditorBtn.OnMouseEnter = function(sender)
@@ -151,6 +157,10 @@ function thisFormManager:assign_current_form_events()
 
     self.frm.TeamsEditorBtn.OnPaint = function(sender)
         self:onPaintButton(sender)
+    end
+
+    self.frm.PlayersTransferImg.OnClick = function(sender)
+        TransferPlayersForm.show()
     end
 
     self.frm.PlayersTransferBtn.OnClick = function(sender)
@@ -168,6 +178,26 @@ function thisFormManager:assign_current_form_events()
     self.frm.PlayersTransferBtn.OnPaint = function(sender)
         self:onPaintButton(sender)
     end
+
+    self.frm.ScheduleEditorImg.OnClick = function(sender)
+        MatchScheduleEditorForm.show()
+    end
+
+    self.frm.ScheduleEditorBtn.OnClick = function(sender)
+        MatchScheduleEditorForm.show()
+    end
+
+    self.frm.ScheduleEditorBtn.OnMouseEnter = function(sender)
+        self:onBtnMouseEnter(sender)
+    end
+
+    self.frm.ScheduleEditorBtn.OnMouseLeave = function(sender)
+        self:onBtnMouseLeave(sender)
+    end
+
+    self.frm.ScheduleEditorBtn.OnPaint = function(sender)
+        self:onPaintButton(sender)
+    end
 end
 
 function thisFormManager:setup(params)
@@ -181,7 +211,6 @@ function thisFormManager:setup(params)
     self.frm.LoadingPanel.Visible = true
     self.frm.LoadingPanel.Caption = "Loading data..."
 
-    
     self:assign_current_form_events()
 end
 

@@ -584,6 +584,14 @@ end
 
 function thisFormManager:onShow(sender)
     self.logger:debug(string.format("onShow: %s", self.name))
+
+    local is_in_cm = is_cm_loaded()
+    if not is_in_cm then
+        showMessage("This feature works only in career mode.")
+        self.frm.close()
+        return
+    end
+
     getAddressList().getMemoryRecordByID(3034).Active = true
     self.frm.TransferTypeListBox.setItemIndex(0)
 

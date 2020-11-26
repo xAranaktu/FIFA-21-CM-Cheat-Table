@@ -105,6 +105,7 @@ AOB_PATTERNS = {
     FootballCompEng = {
         MODULE_NAME = 'FootballCompEng_Win64_retail.dll',
         AOBS = {
+            Calendar = '41 8B C5 89 85 90 00 00 00',
             SimMatchSettings = '45 8B 91 A4 00 00 00'
         }
     }
