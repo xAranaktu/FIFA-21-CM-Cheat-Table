@@ -213,3 +213,20 @@ v21.1.1.5:
 v21.1.1.6:
     - Added to GUI:
         - Match Schedule Editor
+
+v21.1.1.7:
+    - Added to GUI:
+        - Match-Fixing
+
+v21.1.1.8:
+    - Added to Players Editor:
+        - Player name above miniface
+        - Option to search for players also by name
+    - Added to Play As Player:
+        - Accomplishments
+    - Added Unique Player Movement:
+        - Unique Sprint Style
+    - Added to Non-CM Related:
+        - Free Fly Camera
+    - Changed in Teams Editor:
+        - on formation screen playerids has been replaced with player names
