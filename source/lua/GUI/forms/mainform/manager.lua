@@ -198,6 +198,26 @@ function thisFormManager:assign_current_form_events()
     self.frm.ScheduleEditorBtn.OnPaint = function(sender)
         self:onPaintButton(sender)
     end
+
+    self.frm.MatchFixingImg.OnClick = function(sender)
+        MatchFixingForm.show()
+    end
+    
+    self.frm.MatchFixingBtn.OnClick = function(sender)
+        MatchFixingForm.show()
+    end
+
+    self.frm.MatchFixingBtn.OnMouseEnter = function(sender)
+        self:onBtnMouseEnter(sender)
+    end
+
+    self.frm.MatchFixingBtn.OnMouseLeave = function(sender)
+        self:onBtnMouseLeave(sender)
+    end
+
+    self.frm.MatchFixingBtn.OnPaint = function(sender)
+        self:onPaintButton(sender)
+    end
 end
 
 function thisFormManager:setup(params)

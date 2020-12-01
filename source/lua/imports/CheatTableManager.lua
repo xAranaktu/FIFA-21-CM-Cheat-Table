@@ -14,6 +14,8 @@ local teamsEditorFormManager = require 'lua/GUI/forms/teamseditorform/manager';
 local findteamFormManager = require 'lua/GUI/forms/findteamform/manager';
 local transferplayersFormManager = require 'lua/GUI/forms/transferplayersform/manager';
 local matchscheduleeditorFormManager = require 'lua/GUI/forms/matchscheduleeditorform/manager';
+local matchfixingFormManager = require 'lua/GUI/forms/matchfixingform/manager';
+local newmatchfixFormManager = require 'lua/GUI/forms/newmatchfixform/manager';
 
 local TableManager = {}
 
@@ -210,7 +212,15 @@ function TableManager:get_forms_map()
         matchscheduleeditor_form = {
             mgr = matchscheduleeditorFormManager,
             frm = MatchScheduleEditorForm
-        }
+        },
+        matchfixing_form = {
+            mgr = matchfixingFormManager,
+            frm = MatchFixingForm
+        },
+        newmatchfix_form = {
+            mgr = newmatchfixFormManager,
+            frm = NewMatchFixForm
+        },
     }
 end
 
@@ -218,13 +228,14 @@ function TableManager:setup_forms()
     local forms_map = self:get_forms_map()
 
     local dirs_cpy = deepcopy(self.dirs)
+    local fnSaveCfg = function(cfg)
+        self:save_cfg(cfg)
+    end
 
     mainFormManager.dirs = dirs_cpy 
 
     settingsFormManager.dirs = dirs_cpy
-    settingsFormManager.fnSaveCfg = function(cfg)
-        self:save_cfg(cfg)
-    end
+    settingsFormManager.fnSaveCfg = fnSaveCfg
 
     playersEditorFormManager.dirs = dirs_cpy
     playersEditorFormManager.game_db_manager = self.game_db_manager
@@ -244,6 +255,15 @@ function TableManager:setup_forms()
     matchscheduleeditorFormManager.dirs = dirs_cpy
     matchscheduleeditorFormManager.game_db_manager = self.game_db_manager
     matchscheduleeditorFormManager.memory_manager = self.memory_manager
+
+    matchfixingFormManager.dirs = dirs_cpy
+    matchfixingFormManager.game_db_manager = self.game_db_manager
+    matchfixingFormManager.memory_manager = self.memory_manager
+    matchfixingFormManager.fnSaveCfg = fnSaveCfg
+
+    newmatchfixFormManager.dirs = dirs_cpy
+    newmatchfixFormManager.game_db_manager = self.game_db_manager
+    newmatchfixFormManager.memory_manager = self.memory_manager
 
     for k, v in pairs(forms_map) do
         self.form_managers[k] = v.mgr
@@ -694,8 +714,6 @@ function TableManager:load_config()
         return DEFAULT_CFG
     end
 end
-
-
 
 function TableManager:get_screen_id()
     local ptr = self.ptrs["screen_id"]
