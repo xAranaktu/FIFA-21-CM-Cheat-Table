@@ -2822,19 +2822,17 @@ function thisFormManager:get_components_description()
     return components_description
 end
 
-function thisFormManager:onShow(sender)
+function thisFormManager:onShow(sender, player_addr, playerlink_addr)
     self.logger:debug(string.format("onShow: %s", self.name))
+    self.frm.SearchPlayerByID.Visible = false
+    self.frm.FindPlayerByID.Visible = false
 
     -- Show Loading panel
-    self.frm.FindPlayerByID.Visible = false
-    self.frm.SearchPlayerByID.Visible = false
+    self.frm.FindPlayerBtn.Visible = false
     self.frm.WhileLoadingPanel.Visible = true
 
-    -- Not READY!
-    -- self.frm.PlayerCloneTab.Visible = false
-
     local onShow_delayed_wrapper = function()
-        self:onShow_delayed()
+        self:onShow_delayed(player_addr, playerlink_addr)
     end
 
     self.fill_timer = createTimer(nil)
@@ -2845,17 +2843,18 @@ function thisFormManager:onShow(sender)
     timer_setEnabled(self.fill_timer, true)
 end
 
-function thisFormManager:onShow_delayed()
+function thisFormManager:onShow_delayed(player_addr, playerlink_addr)
     -- Disable Timer
     timer_setEnabled(self.fill_timer, false)
     self.fill_timer = nil
 
     self.current_addrs = {}
-    self.current_addrs["players"] = readPointer("pPlayersTableCurrentRecord")
-    self.current_addrs["teamplayerlinks"] = readPointer("pTeamplayerlinksTableCurrentRecord")
+    self.current_addrs["players"] = player_addr or readPointer("pPlayersTableCurrentRecord")
+    self.current_addrs["teamplayerlinks"] = playerlink_addr or readPointer("pTeamplayerlinksTableCurrentRecord")
     self.current_addrs["career_calendar"] = readPointer("pCareerCalendarTableCurrentRecord")
     self.current_addrs["career_users"] = readPointer("pUsersTableFirstRecord")
     gCTManager:init_ptrs()
+    self.game_db_manager:cache_player_names()
 
     self:fill_form(self.current_addrs)
     self:recalculate_ovr(true)
@@ -2869,8 +2868,10 @@ function thisFormManager:onShow_delayed()
     self.frm.PlayerInfoTab.Color = "0x001D1618"
     self.frm.PlayerInfoPanel.Visible = true
     self.frm.WhileLoadingPanel.Visible = false
-    self.frm.FindPlayerByID.Visible = true
-    self.frm.SearchPlayerByID.Visible = true
+    self.frm.FindPlayerBtn.Visible = true
+
+    -- self.frm.FindPlayerByID.Visible = true
+    -- self.frm.SearchPlayerByID.Visible = true
 end
 
 function thisFormManager:attributes_trackbar_val(args)
@@ -3049,9 +3050,7 @@ function thisFormManager:fill_form(addrs, playerid)
         self.frm.TeamIDEdit.Text = "Unknown"
     end
 
-
-    -- TODO Load name
-    self.frm.PlayerNameLabel.Caption = ""
+    self.frm.PlayerNameLabel.Caption = self:get_player_name(playerid)
 
     local career_only_comps = {
         "WageLabel",
@@ -5964,25 +5963,42 @@ function thisFormManager:assign_current_form_events()
         self:onShow(sender)
     end
 
-    self.frm.FindPlayerByID.OnClick = function(sender)
-        sender.Text = ''
-    end
-    self.frm.SearchPlayerByID.OnClick = function(sender)
-        local playerid = tonumber(self.frm.FindPlayerByID.Text)
-        if playerid == nil then return end
+    -- self.frm.FindPlayerByID.OnClick = function(sender)
+    --     sender.Text = ''
+    -- end
+    -- self.frm.SearchPlayerByID.OnClick = function(sender)
+    --     local playerid = tonumber(self.frm.FindPlayerByID.Text)
+    --     if playerid == nil then return end
 
-        self:check_if_has_unsaved_changes()
+    --     self:check_if_has_unsaved_changes()
 
-        local player_found_addr = self:find_player_by_id(playerid)
-        if player_found_addr and player_found_addr > 0 then
-            self:find_player_club_team_record(playerid)
-            self.frm.FindPlayerByID.Text = playerid
-            self:recalculate_ovr()
-            self:onShow()
-        else 
-            self.logger:error(string.format("Not found any player with ID: %d.", playerid))
-        end
+    --     local player_found_addr = self:find_player_by_id(playerid)
+    --     if player_found_addr and player_found_addr > 0 then
+    --         self:find_player_club_team_record(playerid)
+    --         self.frm.FindPlayerByID.Text = playerid
+    --         self:recalculate_ovr()
+    --         self:onShow()
+    --     else 
+    --         self.logger:error(string.format("Not found any player with ID: %d.", playerid))
+    --     end
+    -- end
+
+    self.frm.FindPlayerBtn.OnClick = function(sender)
+        FindPlayerForm.show()
     end
+
+    self.frm.FindPlayerBtn.OnMouseEnter = function(sender)
+        self:onBtnMouseEnter(sender)
+    end
+
+    self.frm.FindPlayerBtn.OnMouseLeave = function(sender)
+        self:onBtnMouseLeave(sender)
+    end
+
+    self.frm.FindPlayerBtn.OnPaint = function(sender)
+        self:onPaintButton(sender)
+    end
+
     self.frm.PlayerEditorSettings.OnClick = function(sender)
         SettingsForm.show()
     end

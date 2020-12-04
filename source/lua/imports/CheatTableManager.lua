@@ -12,6 +12,7 @@ local settingsFormManager = require 'lua/GUI/forms/settingsform/manager';
 local playersEditorFormManager = require 'lua/GUI/forms/playerseditorform/manager';
 local teamsEditorFormManager = require 'lua/GUI/forms/teamseditorform/manager';
 local findteamFormManager = require 'lua/GUI/forms/findteamform/manager';
+local findplayerFormManager = require 'lua/GUI/forms/findplayerform/manager';
 local transferplayersFormManager = require 'lua/GUI/forms/transferplayersform/manager';
 local matchscheduleeditorFormManager = require 'lua/GUI/forms/matchscheduleeditorform/manager';
 local matchfixingFormManager = require 'lua/GUI/forms/matchfixingform/manager';
@@ -41,8 +42,6 @@ function TableManager:new(o)
     self.proc_name = ""
 
     self.dirs = {}
-    self.fifa_player_names = {}
-    self.cached_players = {}
     self.form_managers = {}
     self.cfg = {}
     self.offsets = {}
@@ -205,6 +204,10 @@ function TableManager:get_forms_map()
             mgr = findteamFormManager,
             frm = FindTeamForm
         },
+        findplayer_form = {
+            mgr = findplayerFormManager,
+            frm = FindPlayerForm
+        },
         transferplayers_form = {
             mgr = transferplayersFormManager,
             frm = TransferPlayersForm
@@ -251,6 +254,9 @@ function TableManager:setup_forms()
 
     findteamFormManager.game_db_manager = self.game_db_manager
     findteamFormManager.memory_manager = self.memory_manager
+
+    findplayerFormManager.game_db_manager = self.game_db_manager
+    findplayerFormManager.memory_manager = self.memory_manager
 
     matchscheduleeditorFormManager.dirs = dirs_cpy
     matchscheduleeditorFormManager.game_db_manager = self.game_db_manager
@@ -324,7 +330,6 @@ function TableManager:initialize()
     self.dirs["OFFSETS_FILE"] = self.dirs["DATA"] .. 'offsets.ini';
 
     self:setup_forms()
-
 end
 
 function TableManager:hide_mem_scanner()
@@ -450,6 +455,18 @@ function TableManager:init_ptrs()
         "players",
         self.memory_manager:read_multilevel_pointer(DB_One_Tables_ptr, {0xB8, 0x28}),
         {"pPlayersTableCurrentRecord", "pPlayersTableFirstRecord"}
+    )
+
+    self.game_db_manager:add_table(
+        "editedplayernames",
+        self.memory_manager:read_multilevel_pointer(DB_One_Tables_ptr, {0xF8, 0x28}),
+        {"pEditedplayernamesTableCurrentRecord", "pEditedplayernamesTableFirstRecord"}
+    )
+
+    self.game_db_manager:add_table(
+        "dcplayernames",
+        self.memory_manager:read_multilevel_pointer(DB_One_Tables_ptr, {0x140, 0x28}),
+        {"pDcplayernamesTableCurrentRecord", "pDcplayernamesTableFirstRecord"}
     )
 
     self.game_db_manager:add_table(
@@ -751,7 +768,7 @@ function TableManager:on_attach_to_process()
 
     -- Generate offsets.ini with all offsets.
     -- self:update_offsets()
-
+    self.game_db_manager:load_playernames()
     self:save_cfg()
     self:autoactivate_scripts()
     self:init_ptrs()

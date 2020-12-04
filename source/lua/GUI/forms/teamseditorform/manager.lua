@@ -140,15 +140,15 @@ function thisFormManager:swap_players(sender)
         local playerid0,_ = string.gsub(self.player_to_swap.Hint, "%D", '')
         local playerid1,_ = string.gsub(sender.Hint, "%D", '')
 
-        local playername0 = nil
         local _iplayerid0 = tonumber(playerid0)
+        local playername0 = self:get_player_name(_iplayerid0)
         local player0addr = nil
         if _iplayerid0 >= 280000 then
             player0addr = self:find_player_by_id(_iplayerid0)
         end
 
-        local playername1 = nil
         local _iplayerid1 = tonumber(playerid1)
+        local playername1 = self:get_player_name(_iplayerid1)
         local player1addr = nil
         if _iplayerid1 >= 280000 then
             player1addr = self:find_player_by_id(_iplayerid1)
@@ -265,7 +265,7 @@ function thisFormManager:update_formation_pitch(formation_data, teamsheet_addr)
             player_addr = self:find_player_by_id(playerid)
         end
 
-        local playername = nil
+        local playername = self:get_player_name(playerid)
 
         if i <= 10 then
             offsetx = formation_data[string.format("offset%dx", i)]
@@ -1422,8 +1422,6 @@ function thisFormManager:fill_form(addrs, teamid)
         ::continue::
     end
 
-
-
     local ss_c = self:load_crest(
         teamid, record_addr
     )
@@ -1478,6 +1476,7 @@ function thisFormManager:onShow_delayed(team_addr)
     self.current_addrs["default_teamsheets"] = 0
     
     gCTManager:init_ptrs()
+    self.game_db_manager:cache_player_names()
 
     self:fill_form(self.current_addrs)
 

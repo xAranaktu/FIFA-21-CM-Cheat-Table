@@ -9,9 +9,32 @@ function GameDBManager:new(o, logger, memory_manager)
     self.memory_manager = memory_manager
 
     self.tables = {}
+    self.fifa_player_names = {}
+    self.cached_player_names = {}
     self.offsets = DB_TABLE_STRUCT_OFFSETS
 
     return o;
+end
+
+function GameDBManager:load_playernames()
+    local playernames_file_path = "other/playernames.csv"
+    self.logger:info(string.format("Loading playernames: %s", playernames_file_path))
+    
+    local f, err = io.open(playernames_file_path,"r")
+    if f then
+        io.close(f)
+        sleep(150)
+        for line in io.lines(playernames_file_path) do
+            local values = split(line, ',')
+            local name = values[1]
+            local nameid = tonumber(values[2])
+            -- local commentaryid = values[3]
+            self.fifa_player_names[nameid] = name
+        end
+        self.logger:info("Playernames loaded.")
+    else
+        self.logger:info("Playernames file not found.")
+    end
 end
 
 function GameDBManager:get_table_first_record(table_pointer)
@@ -46,6 +69,14 @@ end
 
 function GameDBManager:clear_tables()
     self.tables = {}
+end
+
+function GameDBManager:clear_cached_player_names()
+    self.cached_player_names = {}
+end
+
+function GameDBManager:get_cached_player_names()
+    return self.cached_player_names
 end
 
 function GameDBManager:add_table(table_name, pointer, first_record_write_to_arr)
@@ -263,5 +294,220 @@ function GameDBManager:set_table_record_field_value(record_addr, table_name, fie
     end
 end
 
+function GameDBManager:cache_player_names()
+    self.logger:info("Cache Player Names")
+    self:clear_cached_player_names()
+    if not self.tables["players"]["written_records"] then
+        self.logger:error("Cant cache player names. No written records")
+        return 
+    end
+    local playerid = 0
+
+    -- Collect Editedplayernames
+    local editedplayernames = {}
+
+    local table_name = "editedplayernames"
+    local first_record = self.tables[table_name]["first_record"]
+    local record_size = self.tables[table_name]["record_size"]
+    local written_records = self.tables[table_name]["written_records"]
+
+    local row = 0
+    local current_addr = first_record
+    local last_byte = 0
+    local is_record_valid = true
+
+    local firstname = ''
+    local surname = ''
+    local jerseyname = ''
+    local commonname = ''
+    while true do
+        if row >= written_records then
+            break
+        end
+
+        current_addr = first_record + (record_size*row)
+        last_byte = readBytes(current_addr+record_size-1, 1, true)[1]
+        is_record_valid = not (bAnd(last_byte, 128) > 0)
+        if not is_record_valid then goto continue end
+
+        playerid = self:get_table_record_field_value(
+            current_addr, table_name, "playerid"
+        )
+
+        firstname = self:get_table_record_field_value(
+            current_addr, table_name, "firstname"
+        )
+        surname = self:get_table_record_field_value(
+            current_addr, table_name, "surname"
+        )
+        jerseyname = self:get_table_record_field_value(
+            current_addr, table_name, "playerjerseyname"
+        )
+        commonname = self:get_table_record_field_value(
+            current_addr, table_name, "commonname"
+        )
+
+        editedplayernames[playerid] = {
+            firstname = firstname,
+            surname = surname,
+            jerseyname = jerseyname,
+            commonname = commonname,
+        }
+
+        ::continue::
+        row = row + 1
+    end
+
+    -- Collect Dcplayernames
+    local dcplayernames = {}
+
+    table_name = "dcplayernames"
+    first_record = self.tables[table_name]["first_record"]
+    record_size = self.tables[table_name]["record_size"]
+    written_records = self.tables[table_name]["written_records"]
+
+    row = 0
+    current_addr = first_record
+    last_byte = 0
+    is_record_valid = true
+    local nameid = 0
+    local name = ''
+    while true do
+        if row >= written_records then
+            break
+        end
+
+        current_addr = first_record + (record_size*row)
+        last_byte = readBytes(current_addr+record_size-1, 1, true)[1]
+        is_record_valid = not (bAnd(last_byte, 128) > 0)
+        if not is_record_valid then goto continue end
+
+        nameid = self:get_table_record_field_value(
+            current_addr, table_name, "nameid"
+        )
+        name = self:get_table_record_field_value(
+            current_addr, table_name, "name"
+        )
+
+        dcplayernames[nameid] = name
+
+        ::continue::
+        row = row + 1
+    end
+
+    -- Assign names to players
+    local dcplayername_start_idx = 44000
+    local playernames = self.fifa_player_names
+    local knownas = ''
+    local fullname = '' -- For search by name
+
+    table_name = "players"
+    first_record = self.tables[table_name]["first_record"]
+    record_size = self.tables[table_name]["record_size"]
+    written_records = self.tables[table_name]["written_records"]
+
+    row = 0
+    current_addr = first_record
+    last_byte = 0
+    is_record_valid = true
+    local edited_playername = nil
+    local firstnameid = 0
+    local lastnameid = 0
+    local commonnameid = 0
+    local playerjerseynameid = 0
+    while true do
+        if row >= written_records then
+            break
+        end
+
+        current_addr = first_record + (record_size*row)
+        last_byte = readBytes(current_addr+record_size-1, 1, true)[1]
+        is_record_valid = not (bAnd(last_byte, 128) > 0)
+        if not is_record_valid then goto continue end
+
+        playerid = self:get_table_record_field_value(
+            current_addr, table_name, "playerid"
+        )
+
+        edited_playername = editedplayernames[playerid]
+
+        if edited_playername then
+            firstname = edited_playername["firstname"]
+            surname = edited_playername["surname"]
+            jerseyname = edited_playername["jerseyname"]
+            commonname = edited_playername["commonname"]
+        else
+            firstnameid = self:get_table_record_field_value(
+                current_addr, table_name, "firstnameid"
+            )
+
+            lastnameid = self:get_table_record_field_value(
+                current_addr, table_name, "lastnameid"
+            )
+
+            commonnameid = self:get_table_record_field_value(
+                current_addr, table_name, "commonnameid"
+            )
+
+            playerjerseynameid = self:get_table_record_field_value(
+                current_addr, table_name, "playerjerseynameid"
+            )
+
+            if firstnameid >= dcplayername_start_idx then
+                firstname = dcplayernames[firstnameid] or ''
+            else
+                firstname = playernames[firstnameid] or ''
+            end
+
+            if lastnameid >= dcplayername_start_idx then
+                surname = dcplayernames[lastnameid] or ''
+            else
+                surname = playernames[lastnameid] or ''
+            end
+
+            if commonnameid >= dcplayername_start_idx then
+                commonname = dcplayernames[commonnameid] or ''
+            else
+                commonname = playernames[commonnameid] or ''
+            end
+
+            if playerjerseynameid >= dcplayername_start_idx then
+                jerseyname = dcplayernames[playerjerseynameid] or ''
+            else
+                jerseyname = playernames[playerjerseynameid] or ''
+            end
+        end
+
+        fullname = string.lower(string.format(
+                "%s %s %s %s",
+                firstname,
+                surname,
+                jerseyname,
+                commonname
+            ))
+            if commonname == '' then
+                knownas = string.format(
+                    "%s. %s",
+                    string.sub(firstname, 1, 1),
+                    surname
+                )
+            else
+                knownas = commonname
+            end
+
+        self.cached_player_names[playerid] = {
+            firstname=firstname,
+            surname=surname,
+            jerseyname=jerseyname,
+            commonname=commonname,
+            knownas=knownas,
+            fullname=fullname
+        }
+
+        ::continue::
+        row = row + 1
+    end
+    self.logger:info("Cache Player Names Done")
+end
 
 return GameDBManager;

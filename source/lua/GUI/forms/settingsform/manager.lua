@@ -82,6 +82,10 @@ function thisFormManager:onShow(sender)
     self.has_unsaved_changes = false
     self.selection_idx = 0
 
+    -- Hide not needed?
+    self.frm.CachePlayersDataCB.Visible = false
+    self.frm.CachePlayersDataLabel.Visible = false
+
     -- Fill General
     self.frm.SelectCacheDirectoryDialog.InitialDir = string.gsub(self.dirs["CACHE"], "/","\\")
     self.frm.CacheFilesDirEdit.Hint = self.dirs["CACHE"]

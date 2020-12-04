@@ -101,6 +101,19 @@ AOB_PATTERNS = {
     ContractNeg = '48 8B 50 38 48 83 EA 40 49 FF 60 08 CC CC CC CC CC',
     AltTab = '48 83 EC 48 48 83 3D ?? ?? ?? ?? ?? 74',
 
+    UniqueSprint = '45 8B 8A 84 01 00 00',
+    PAPAccompl = "8B 84 A9 18 07 00 00",
+
+    -- Free fly camera
+    CAM_ROTATE = "F3 0F 11 83 C8 05 00 00 F3",
+    FULL_ANGLE_ROTV = "F3 0F 10 40 60 F3 0F 58 83 B4",
+    CAM_TARGET = "0F 11 AB 60 0B 00 00",
+    CAM_V_ROTATE_SPEED_MUL = "F3 0F 5E C7 F3 0F 11 83 B0 0B 00 00",
+    CAM_H_ROTATE_SPEED_MUL = "F3 0F 11 83 AC 0B 00 00",
+    CAM_Z_ROTATE_SPEED_MUL = "F3 0F 11 83 B4 0B 00 00 F3",
+    STADIUM_BOUNDARY = "0F 10 32 0F 28 D6 0F C6 C0 00", -- XMM5?
+    CAM_Z_BOUNDARY = "66 0F 70 0A 55 F3 0F 10 15 ?? ?? ?? ?? 0F 2F",
+
     -- FootballCompEng_Win64_retail.dll
     FootballCompEng = {
         MODULE_NAME = 'FootballCompEng_Win64_retail.dll',
@@ -168,6 +181,17 @@ DB_TABLE_STRUCT_OFFSETS = {
 }
 
 DB_TABLES_META_MAP = {
+    dcplayernames = {
+        nameid = 1,
+        name = 2
+    },
+    editedplayernames = {
+        playerid = 1,
+        firstname = 2,
+        surname = 3,
+        playerjerseyname = 4,
+        commonname = 5
+    },
     teams = {
         teamid = 1,
         stadiummowpattern_code = 2,
@@ -684,6 +708,82 @@ DB_TABLES_META_MAP = {
 }
 
 DB_TABLES_META = {
+    dcplayernames = {
+        {
+            name = "nameid",
+            shortname = "FuiB",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 13,
+            offset = 0x26,
+            rangehigh = 50000,
+            rangelow = 44000,
+            startbit = 0,
+            key = true,
+        },
+        {
+            name = "name",
+            shortname = "vIys",
+            fld_type = "DBOFIELDTYPE_STRING",
+            depth = 304,
+            offset = 0x0,
+            rangehigh = 0,
+            rangelow = 0,
+            startbit = 0,
+        },
+    },
+    editedplayernames = {
+        {
+            name = "playerid",
+            shortname = "ykFq",
+            fld_type = "DBOFIELDTYPE_INTEGER",
+            depth = 19,
+            offset = 0xB4,
+            rangehigh = 500000,
+            rangelow = 0,
+            startbit = 0,
+            key = true,
+        },
+        {
+            name = "firstname",
+            shortname = "HdeP",
+            fld_type = "DBOFIELDTYPE_STRING",
+            depth = 360,
+            offset = 0x0,
+            rangehigh = 0,
+            rangelow = 0,
+            startbit = 0,
+        },
+        {
+            name = "surname",
+            shortname = "rREd",
+            fld_type = "DBOFIELDTYPE_STRING",
+            depth = 360,
+            offset = 0x87,
+            rangehigh = 0,
+            rangelow = 0,
+            startbit = 0,
+        },
+        {
+            name = "playerjerseyname",
+            shortname = "kRfb",
+            fld_type = "DBOFIELDTYPE_STRING",
+            depth = 360,
+            offset = 0x5A,
+            rangehigh = 0,
+            rangelow = 0,
+            startbit = 0,
+        },
+        {
+            name = "commonname",
+            shortname = "xnfZ",
+            fld_type = "DBOFIELDTYPE_STRING",
+            depth = 360,
+            offset = 0x2D,
+            rangehigh = 0,
+            rangelow = 0,
+            startbit = 0,
+        }
+    },
     teams = {
         {
             name = "teamid",
