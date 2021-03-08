@@ -230,3 +230,10 @@ v21.1.1.8:
         - Free Fly Camera
     - Changed in Teams Editor:
         - on formation screen playerids has been replaced with player names
+
+v21.1.1.9:
+    - Fixed adding/removing following traits via players editor:
+        - Technical Dribbler (CPU)
+        - GK Rushes Out of Goal
+        - GK Cautious with Crosses
+        - GK Comes for Crosses
