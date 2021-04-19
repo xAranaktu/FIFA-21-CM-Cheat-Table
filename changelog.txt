@@ -237,3 +237,7 @@ v21.1.1.9:
         - GK Rushes Out of Goal
         - GK Cautious with Crosses
         - GK Comes for Crosses
+
+v21.1.2.0:
+    - Fixed "Match Settings" -> "Time Of Day" script
+    - Fixed error when activating uninitialized "Play As Player" -> "Accomplishments" -> "All -> 9999" script
