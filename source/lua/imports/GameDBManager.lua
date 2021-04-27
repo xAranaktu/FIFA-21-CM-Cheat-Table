@@ -217,14 +217,6 @@ function GameDBManager:get_table_record_field_value(record_addr, table_name, fie
         local b = bShl(1, fld_desc["depth"]) - 1
         result = bAnd(a,b)
 
-        -- TODO: DElete
-        -- if fieldname == "trait1" or fieldname == "trait2" then
-        --     self.logger:info(string.format(
-        --         "fld: %s, addr: 0x%X+0x%X startbit: %d, depth: %d",
-        --         fieldname, record_addr, fld_desc["offset"], fld_desc["startbit"], fld_desc["depth"]
-        --     ))
-        -- end
-
         if not raw then
             result = result + fld_desc["rangelow"]
         end

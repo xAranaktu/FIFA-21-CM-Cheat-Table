@@ -828,6 +828,11 @@ function TableManager:start()
     end
 
     self.cfg = self:load_config()
+    if (self.cfg.flags == nil) then
+        local critical_error = "\nError!\nCorrupted config.ini\nTo solve this problem:\n1. Turn Off FIFA and Cheat Engine\n2. Go to Documents -> FIFA 21 -> Cheat Table -> data\n3. Delete the config.ini file"
+        self.logger:critical(critical_error)
+        assert(false, critical_error)
+    end
 
     DEBUG_MODE = self.cfg.flags.debug_mode
 
