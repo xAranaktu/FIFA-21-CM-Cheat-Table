@@ -622,12 +622,12 @@ function thisFormManager:get_components_description()
     local fnTraitCheckbox = function(addrs, comp_desc)
         local field_name = comp_desc["db_field"]["field_name"]
         local table_name = comp_desc["db_field"]["table_name"]
+        local bit = comp_desc["trait_bit"]
 
         local addr = addrs[table_name]
 
         local traitbitfield = self.game_db_manager:get_table_record_field_value(addr, table_name, field_name)
-        
-        local is_set = bAnd(bShr(traitbitfield, comp_desc["trait_bit"]), 1)
+        local is_set = bAnd(bShr(traitbitfield, bit), 1)
 
         return is_set
     end

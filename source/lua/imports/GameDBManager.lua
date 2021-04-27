@@ -212,10 +212,18 @@ function GameDBManager:get_table_record_field_value(record_addr, table_name, fie
     local fld_type = fld_desc["fld_type"]
 
     if fld_type == "DBOFIELDTYPE_INTEGER" or fld_type == "DBOFIELDTYPE_DATE" then
-        local v = readInteger(record_addr + fld_desc["offset"])
+        local v = readQword(record_addr + fld_desc["offset"])
         local a = bShr(v, fld_desc["startbit"])
         local b = bShl(1, fld_desc["depth"]) - 1
         result = bAnd(a,b)
+
+        -- TODO: DElete
+        -- if fieldname == "trait1" or fieldname == "trait2" then
+        --     self.logger:info(string.format(
+        --         "fld: %s, addr: 0x%X+0x%X startbit: %d, depth: %d",
+        --         fieldname, record_addr, fld_desc["offset"], fld_desc["startbit"], fld_desc["depth"]
+        --     ))
+        -- end
 
         if not raw then
             result = result + fld_desc["rangelow"]
@@ -248,7 +256,7 @@ function GameDBManager:set_table_record_field_value(record_addr, table_name, fie
             new_value = readInteger("magic_fldtype_real")
         end
 
-        local v = readInteger(addr)
+        local v = readQword(addr)
         --self.logger:debug(string.format("writeval: %d", v))
         local startbit = fld_desc["startbit"]
         local depth = fld_desc["depth"]-1
@@ -276,7 +284,7 @@ function GameDBManager:set_table_record_field_value(record_addr, table_name, fie
         end
         --self.logger:debug(string.format("writeval: %d", v))
 
-        writeInteger(addr, v)
+        writeQword(addr, v)
     elseif fld_type == "DBOFIELDTYPE_STRING" then
         local string_max_len = math.floor(fld_desc["depth"] / 8)
         local new_val_len = string.len(new_value)
